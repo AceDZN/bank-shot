@@ -40,7 +40,7 @@ Raw downloads (gitignored) are in `assets-src/`: `attendant-raw.glb` 2,593,852 B
 - **Export:** GLB, texture 1k, Export Skeleton on, Number of Animations 5 (all), "Animation stay in Place" on → one GLB with skeleton + 5 clips.
 - **Processing:** `assets-src/tools/prep-attendant.mjs` renames two clips (`Facepalm: the character…` → `facepalm`, `frustrated_01` → `disappointed`), then `npx gltf-transform optimize in out --texture-compress webp --texture-size 1024 --simplify-ratio 0.78 --simplify-error 0.001` (the lead's sloppy simplifier was not used on the skinned mesh).
 - **Clips (name, duration):** `idle` 15.33 s, `facepalm` 4.96 s, `cheer` 12.08 s, `clap` 13.67 s, `disappointed` 3.54 s (Tripo preset `frustrated_01`: slumped, head down).
-- **Verified:** loaded in three.js r(repo version) with GLTFLoader + MeshoptDecoder in a local viewer; `AnimationMixer` played `idle`, `cheer` (arms up, height 1.11) and `facepalm` (hand on forehead) with no visible skin tearing. A CPU skinning check (`assets-src/tools/skin-check.mjs`) gives matching bind-pose and posed bounds for raw vs optimized (bind 0..1.00 tall; cheer@2 s 1.115 vs 1.111). Height ≈ **1.0 GLB unit** feet to top of hair; feet at y = 0; faces +Z. Note: `gltf-transform inspect`'s static bbox reports −1..1 for the optimized file because quantization moves the scale into the skin; the rendered size is unchanged.
+- **Verified:** loaded in three.js 0.186.1 (repo version) with GLTFLoader + MeshoptDecoder in a local viewer; `AnimationMixer` played `idle`, `cheer` (arms up, height 1.11) and `facepalm` (hand on forehead) with no visible skin tearing. A CPU skinning check (`assets-src/tools/skin-check.mjs`) gives matching bind-pose and posed bounds for raw vs optimized (bind 0..1.00 tall; cheer@2 s 1.115 vs 1.111). Height ≈ **1.0 GLB unit** feet to top of hair; feet at y = 0; faces +Z. Note: `gltf-transform inspect`'s static bbox reports −1..1 for the optimized file because quantization moves the scale into the skin; the rendered size is unchanged.
 
 ### 2. Curling stone — `curling-stone.glb`
 
@@ -54,7 +54,7 @@ Raw downloads (gitignored) are in `assets-src/`: `attendant-raw.glb` 2,593,852 B
 - Text-to-model. Prompt: "An antique Roman bronze lion-head wall fountain spout, game prop: a stylized lion face with a full curly mane in aged bronze with green patina in the crevices, mouth open with a short round bronze water spout pipe sticking out, mounted on a flat round bronze wall plate behind the mane, front facing, clean silhouette, no water, no wall, no background."
 - Task: https://studio.tripo3d.ai/workspace/generate/c7c148ef-88b7-453d-8518-3b141ef2cbf6 — 30 credits. Raw 19,910 tris.
 - Processing: first tried `node scripts/optimize-model.mjs … 8000 1024 0.05` (sloppy) — it left visible bright seams across the mane and face, so it was replaced by `npx gltf-transform optimize … --texture-compress webp --texture-size 1024 --simplify-ratio 0.4 --simplify-error 0.01`, which looked clean.
-- Orientation: wall plate on the −Z side (z ≈ −0.31), face and spout toward +Z; the spout pipe is at the bottom centre (spout tip ≈ y 0.05–0.15). Mount it with the back against a wall and emit water from the pipe tip.
+- Orientation: wall plate on the −Z side (z ≈ −0.31), face toward +Z (nose at z ≈ 0.31, y ≈ 0.4–0.58); the spout pipe is at the bottom centre, its tip at about x 0, y 0.05–0.14, z 0.245. Mount it with the back against a wall and emit water from the pipe tip.
 
 ### 4. Corinthian column — `column.glb`
 
@@ -68,7 +68,7 @@ Raw downloads (gitignored) are in `assets-src/`: `attendant-raw.glb` 2,593,852 B
 - First attempt (rejected): text-to-model, prompt "A small ancient Roman terracotta clay oil lamp, game prop: round flat body with a decorated top disc (simple relief rosette) and a filling hole, a short pointed nozzle at the front with a wick, a small ring handle at the back, warm orange-red fired clay, slightly worn, stylized realistic, centered, clean silhouette, no flame, no background." Task https://studio.tripo3d.ai/workspace/generate/04f863f0-4615-4cce-aad6-05d09b22745b — 30 credits. It came out as a teapot/jug with a tall neck; Tripo's free retry produced another teapot. Kept only as `assets-src/oil-lamp-raw-v1.glb`.
 - Used: image-to-model from `docs/visual-targets/ref-oil-lamp.png` (ChatGPT turn 6). Task: https://studio.tripo3d.ai/workspace/generate/2d917703-b813-4f02-bd23-f5cb8517ed43 — 30 credits. Raw 19,072 tris. Flat lucerna with rosette + laurel relief, Greek-key band, nozzle and ring handle.
 - Processing: `npx gltf-transform optimize … --texture-compress webp --texture-size 1024 --simplify-ratio 0.25 --simplify-error 0.01`.
-- Orientation: long axis along Z (1.0), nozzle/wick hole toward **+Z** (z ≈ +0.45, y ≈ 0.2), ring handle at −Z; height 0.371. Put the flame (procedural sprite/light) at the nozzle tip.
+- Orientation: long axis along Z (1.0), nozzle/wick hole toward **+Z** (tip at z 0.50, y 0.12–0.22, x ±0.08), ring handle at −Z; height 0.371. Put the flame (procedural sprite/light) at the nozzle tip.
 
 ### 6. Cue — not made
 
@@ -77,4 +77,4 @@ The sixth generation was spent on the oil-lamp redo, so there is no `cue.glb`. A
 ## Not verified
 
 - No performance or FPS measurement of these models in the real game.
-- Validation with `gltf-transform validate` returned no errors/hints for `attendant.glb`; see the final report for the other files.
+- `npx gltf-transform validate` on all five optimized files: **no errors, no hints**; two warnings each — `MESH_PRIMITIVE_GENERATED_TANGENT_SPACE` (normal map without tangents; three.js derives them in the shader, fine) and `UNSUPPORTED_EXTENSION EXT_meshopt_compression` (the validator can't decode meshopt, not a defect). All five loaded and rendered in a local three.js 0.186.1 viewer (GLTFLoader + MeshoptDecoder).

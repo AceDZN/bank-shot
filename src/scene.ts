@@ -32,6 +32,8 @@ export function offsetPoly(poly: Vec[], d: number): Vec[] {
 
 interface MarkView {
   mark: AngleMark;
+  /** Label centre in plane-group coordinates (or the arc's middle when unlabelled). */
+  focus: THREE.Vector3;
   group: THREE.Group;
   mats: THREE.MeshBasicMaterial[];
   base: number[];
@@ -721,7 +723,10 @@ export class World {
       g.add(lab);
     }
     this.plane.add(g);
-    this.marks.set(m.id, { mark: m, group: g, mats, base: mats.map((x) => x.opacity) });
+    const lab = g.children.find((c) => c.userData.label);
+    const am = (m.from + m.sweep / 2) * RAD;
+    const focus = lab ? g.position.clone().add(lab.position) : g.position.clone().add(new THREE.Vector3(Math.cos(am) * m.radius, Math.sin(am) * m.radius, 0));
+    this.marks.set(m.id, { mark: m, group: g, mats, base: mats.map((x) => x.opacity), focus });
   }
 
   /** Portrait screens look along the table's long side so it fills the phone. */
@@ -815,9 +820,9 @@ export class World {
     const mv = id ? this.marks.get(id) : null;
     this.focusRing.visible = !!mv;
     if (mv) {
-      this.focusRing.position.copy(mv.group.position);
-      const s = (mv.mark.radius + 0.12) / 0.22;
-      this.focusRing.scale.set(s, s, 1);
+      this.focusRing.position.copy(mv.focus);
+      this.focusRing.position.z = 0.012;
+      this.focusRing.scale.set(1.15, 1.15, 1);
     }
   }
 
@@ -926,7 +931,7 @@ export class World {
     const top = portrait ? 0.62 : 0.8;
     const bottom = portrait ? -0.62 : -0.56;
     // Landscape leaves the left edge to Decimus, like the mockups.
-    const xl = portrait ? -0.97 : -0.66;
+    const xl = portrait ? -0.97 : -0.6;
     const xr = portrait ? 0.97 : 0.9;
     const fitX = (xr - xl) / 2;
     const cam = this.camera.clone();
@@ -982,11 +987,11 @@ export class World {
     cam.lookAt(this.camBase.look);
     cam.updateMatrixWorld();
     const ray = new THREE.Raycaster();
-    ray.setFromCamera(new THREE.Vector2(portrait ? -0.72 : -0.84, portrait ? -0.5 : -0.62), cam);
+    ray.setFromCamera(new THREE.Vector2(portrait ? -0.72 : -0.8, portrait ? -0.5 : -0.66), cam);
     const feet = new THREE.Vector3();
     if (ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), TABLE_DROP), feet)) {
       this.attendant.position.copy(feet);
-      this.attendant.rotation.y = yaw + 0.35;
+      this.attendant.rotation.y = yaw + 0.2;
     }
   }
 
