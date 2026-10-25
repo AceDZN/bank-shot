@@ -83,8 +83,15 @@ async function boot() {
     e.preventDefault();
     $('glerror').classList.remove('hidden');
   });
+  // ?fresh=SEED plays a generated run (same seed → same tables).
+  const freshSeed = new URLSearchParams(location.search).get('fresh');
+  if (freshSeed !== null && /^\d+$/.test(freshSeed)) {
+    fresh = true;
+    game = new Game(freshRooms(Number(freshSeed)));
+  }
   const deep = parseLevelParam(location.search, game.rooms.length);
   if (deep !== null) startRoom(deep);
+  else if (fresh) startRoom(0);
   postToHost({ type: 'ready' });
   requestAnimationFrame(frame);
 }

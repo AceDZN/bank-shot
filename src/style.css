@@ -35,6 +35,14 @@ body {
 .hidden {
   display: none !important;
 }
+/* Candlelit falloff toward the screen edges, like the mockups. */
+#vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 75% 70% at 55% 48%, rgba(0, 0, 0, 0) 55%, rgba(26, 10, 2, 0.55) 100%),
+    linear-gradient(180deg, rgba(255, 170, 80, 0.06), rgba(0, 0, 0, 0) 40%);
+}
 bdi {
   unicode-bidi: isolate;
 }
