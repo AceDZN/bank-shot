@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Game } from '../src/game.ts';
+import { explainMiss, Game } from '../src/game.ts';
 import { authoredRooms, shoot } from '../src/levels.ts';
 import { freshRoom, freshRooms, isFair } from '../src/variants.ts';
 
@@ -68,6 +68,59 @@ test('three misses open the worked explanation; afterwards a sink scores one sta
   g.strike(1);
   g.settle();
   assert.equal(g.scores[0]?.stars, 1);
+});
+
+test('restarting a room keeps its misses and hint: no farming three stars after seeing the answer', () => {
+  const rooms = authoredRooms();
+  const g = new Game(rooms);
+  const i = rooms.findIndex((r) => r.id === 'r3b');
+  g.enter(i);
+  // 55° (the parallel slip) and 47° (whose card quotes the measured cushion angle).
+  for (const a of [55, 47]) {
+    if (g.phase !== 'aim') g.retry();
+    g.setDial(a);
+    g.strike(1);
+    g.settle();
+  }
+  g.enter(i); // pause → restart room
+  assert.equal(g.strokesLeft, 3);
+  g.setDial(51);
+  g.strike(1);
+  g.settle();
+  assert.equal(g.scores[i]?.stars, 1);
+  assert.equal(g.log.at(-1)!.unaided, false);
+  assert.equal(g.log.at(-1)!.corrected, true);
+  // Replaying the won room can't raise the score either.
+  g.enter(i);
+  g.setDial(51);
+  g.strike(1);
+  g.settle();
+  assert.equal(g.scores[i]?.stars, 1);
+  assert.equal(g.log.at(-1)!.replay, true);
+});
+
+test('a miss on a different cushion never quotes that cushion against the carved angle', () => {
+  const rooms = authoredRooms();
+  for (const r of rooms.filter((x) => x.key)) {
+    for (let a = r.min; a <= r.max; a++) {
+      const p = shoot(r, a);
+      if (p.outcome === 'pocket') continue;
+      const ex = explainMiss(r, a, p);
+      if (ex.measured !== undefined) assert.equal(p.bounces[r.key!.bounce].edge, r.key!.edge, `${r.id} at ${a}`);
+    }
+  }
+});
+
+test('miss texts never tell a non-equality room to look for an equal angle, and never say "almost"', () => {
+  for (const r of authoredRooms()) {
+    for (let a = r.min; a <= r.max; a += 7) {
+      const p = shoot(r, a);
+      if (p.outcome === 'pocket') continue;
+      const t = explainMiss(r, a, p).text;
+      assert.doesNotMatch(t, /כמעט/);
+      assert.doesNotMatch(t, /שווה לזווית החצובה/);
+    }
+  }
 });
 
 test('the corridor miss names the angle at which the ball met the top cushion', () => {

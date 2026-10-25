@@ -14,6 +14,7 @@ import {
   v,
 } from '../src/rules.ts';
 import { authoredRooms, shoot, winningAngles, type Room } from '../src/levels.ts';
+import { isFair } from '../src/variants.ts';
 
 const rooms = authoredRooms();
 const room = (id: string): Room => rooms.find((r) => r.id === id)!;
@@ -44,7 +45,7 @@ test('a pentagon built from interior angles has those angles', () => {
 });
 
 test('every authored room has its handoff number', () => {
-  const want: Record<string, number> = { r1: 50, r2: 35, r3a: 55, r3b: 51, r4: 65, r5: 35, r6: 115, r7: 35 };
+  const want: Record<string, number> = { r1: 50, r2: 35, r3a: 55, r3b: 51, r4: 65, r5: 32, r6: 115, r7: 38 };
   assert.equal(rooms.length, 8);
   for (const r of rooms) assert.equal(r.solution, want[r.id], r.id);
 });
@@ -77,10 +78,13 @@ for (const r of rooms) {
     assert.equal(shoot(r, r.solution, 0.5).outcome, 'short');
   });
 
-  test(`${r.code}: eyeballing within ±4° wins at most 3 of 9 tries`, () => {
-    let wins = 0;
-    for (let e = -4; e <= 4; e++) if (shoot(r, r.solution + e).outcome === 'pocket') wins++;
-    assert.ok(wins <= 3, `${wins} of 9`);
+  test(`${r.code}: the generated-room fairness checks hold (no corner skims, labels apart, baths inside)`, () => {
+    assert.ok(isFair(r));
+  });
+
+  test(`${r.code}: no carved ray runs past its arc (it would hand over the answer line)`, () => {
+    for (const m of r.marks) assert.ok(m.rays <= m.radius + 1e-9, m.id);
+    assert.ok(!r.lines.some((l) => (l.kind as string) === 'worn'));
   });
 
   test(`${r.code}: every bounce on the winning line leaves at its arrival angle`, () => {
@@ -147,10 +151,20 @@ test('4: corner 70°, exit 45° → 65°; the triangle sums to 180°', () => {
   assert.equal(65 + 70 + 45, 180);
 });
 
-test('5: the hexagon is regular with 120° corners; the 60° slip misses', () => {
+test('5: the hexagon is regular with 120° corners and says so; the 60° slip misses', () => {
   const r = room('r5');
   for (let i = 0; i < 6; i++) near(interiorAngle(r.table.poly, i), 120);
-  assert.notEqual(shoot(r, 180 - 60 - 25).outcome, 'pocket');
+  assert.match(r.name + r.goal, /משוכלל/);
+  assert.equal(r.solution, 180 - 120 - 28);
+  assert.notEqual(shoot(r, 180 - 60 - 28).outcome, 'pocket');
+});
+
+test('a constant dial wins at most two of the eight tables, and never the transfer room together with another', () => {
+  for (let a = 5; a <= 175; a++) {
+    const wins = rooms.filter((r) => shoot(r, a).outcome === 'pocket').map((r) => r.id);
+    assert.ok(wins.length <= 2, `${a}° wins ${wins}`);
+    if (wins.includes('r7')) assert.equal(wins.length, 1, `${a}° wins ${wins}`);
+  }
 });
 
 test('6: exterior angle 40° + 75° = 115°; the interior 65° goes in the bath', () => {
@@ -160,18 +174,18 @@ test('6: exterior angle 40° + 75° = 115°; the interior 65° goes in the bath'
   assert.equal(shoot(r, 65).outcome, 'pool');
 });
 
-test('7 (transfer): four corners 100/110/120/95 → the fifth is 115°, and the shot is 35°', () => {
+test('7 (transfer): four corners 100/110/120/95 → the fifth is 115°, and the shot is 180 − 115 − 27 = 38°', () => {
   const r = room('r7');
   const corners = r.table.poly.map((_, i) => Math.round(interiorAngle(r.table.poly, i)));
   assert.deepEqual(corners, [115, 100, 110, 120, 95]);
   assert.equal(r.hint, null);
   assert.ok(!r.marks.some((m) => m.label === '?'));
   assert.ok(!r.marks.some((m) => m.label === '115°'), 'the needed corner is not written on the floor');
-  const res = shoot(r, 35);
+  const res = shoot(r, 38);
   assert.equal(res.outcome, 'pocket');
   assert.ok(res.bounces.length >= 2, 'it is a two-wall shot');
   // A regular-pentagon guess (108°) misses.
-  assert.notEqual(shoot(r, 180 - 108 - 30).outcome, 'pocket');
+  assert.notEqual(shoot(r, 180 - 108 - 27).outcome, 'pocket');
 });
 
 test('trace is deterministic', () => {

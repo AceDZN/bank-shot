@@ -355,7 +355,7 @@ export class World {
       const x = pos.getX(i);
       const y = pos.getY(i);
       const px = 512 + (x / R) * (512 - 12);
-      const py = 512 / 2 + 20 - (y / R) * (512 - 12);
+      const py = 1024 / 2 + 20 - (y / R) * (512 - 12); // the texture's centre row is S/2 + 20
       uv.setXY(i, px / 1024, 1 - py / H);
     }
     const disc = new THREE.Mesh(
@@ -770,7 +770,8 @@ export class World {
       m.position.z = i * 0.0004;
       g.add(m);
     });
-    const hole = new THREE.Mesh(new THREE.CircleGeometry(r + 0.02, 32), new THREE.MeshStandardMaterial({ map: this.texCache.grate, metalness: 0.6, roughness: 0.4 }));
+    // The hole is drawn at the real capture radius, so aiming at it is no easier than the math.
+    const hole = new THREE.Mesh(new THREE.CircleGeometry(r, 32), new THREE.MeshStandardMaterial({ map: this.texCache.grate, metalness: 0.6, roughness: 0.4 }));
     hole.position.z = 0.002;
     g.add(hole);
     const glow = new THREE.Mesh(new THREE.RingGeometry(0.24, 0.28, 48), new THREE.MeshBasicMaterial({ color: '#ffcf70', transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -804,8 +805,8 @@ export class World {
     this.needle.rotation.z = local;
     this.aim.rotation.z = h * RAD;
     this.aim.scale.x = 0.42;
-    if (r.mode === 'vane') this.vaneBlade.rotation.y = -(h / 2) * RAD;
-    else if (this.room.stone && this.stoneObj) this.stoneObj.rotation.y = -h * RAD;
+    if (r.mode === 'vane') this.vaneBlade.rotation.y = (h / 2) * RAD;
+    else if (this.room.stone && this.stoneObj) this.stoneObj.rotation.y = h * RAD;
   }
 
   showAim(on: boolean) {

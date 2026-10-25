@@ -23,9 +23,9 @@ Turn-based precision shots. Each table shows a few exact angles and a "?" where 
 | 3א | המסדרון המקביל | זוויות מתחלפות | path must meet the top cushion at 55° → 55° |
 | 3ב | המסדרון העקום | trap: not parallel | 88° ≠ 92° on a transversal; the cushion leans 4° → 51° (55° misses) |
 | 4 | חיתוך הפינה | סכום זוויות במשולש | corner 70°, leave the 2nd cushion at 45° → 65° |
-| 5 | השולחן המשושה | סכום זוויות במצולע | regular hexagon (120°), meet the next cushion at 10° → 50° |
+| 5 | המשושה המשוכלל | סכום זוויות במצולע | regular hexagon (120°), meet the next cushion at 28° → 32° |
 | 6 | פניית הקרלינג | זווית חיצונית (כיתה ט') | remote angles 40° and 75° → turn the bronze vane 115° |
-| 7 | הקלדריום המוצף | transfer, no hints, no "?" | pentagon corners 100°, 110°, 120°, 95° → fifth 115° → 35° |
+| 7 | הקלדריום המוצף | transfer, no hints, no "?" | pentagon corners 100°, 110°, 120°, 95° → fifth 115°; leave the wall at 27° → 38° |
 
 ## Look
 

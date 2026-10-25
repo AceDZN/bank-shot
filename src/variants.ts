@@ -3,6 +3,9 @@
 // the listed misconceptions miss, and constant strategies (45°, 90°) miss.
 import {
   AUTHORED,
+  BALL_R,
+  inset,
+  labelSpot,
   buildCorner,
   buildCorridor,
   buildCrooked,
@@ -15,7 +18,7 @@ import {
   winningAngles,
   type Room,
 } from './levels.ts';
-import { v } from './rules.ts';
+import { dist, v, type Vec } from './rules.ts';
 
 function rand(seed: number) {
   let s = seed >>> 0 || 1;
@@ -26,13 +29,30 @@ function rand(seed: number) {
 }
 
 export function isFair(r: Room): boolean {
-  if (shoot(r, r.solution).outcome !== 'pocket') return false;
-  const win = winningAngles(r);
-  if (!win.includes(r.solution) || win.some((a) => Math.abs(a - r.solution) > 1)) return false;
+  const win = shoot(r, r.solution);
+  if (win.outcome !== 'pocket') return false;
+  const wins = winningAngles(r);
+  if (!wins.includes(r.solution) || wins.some((a) => Math.abs(a - r.solution) > 1)) return false;
   if ([45, 90].some((a) => shoot(r, a).outcome === 'pocket')) return false;
   if (r.misconceptions.some((m) => shoot(r, m.angle).outcome === 'pocket')) return false;
-  if (r.key && !shoot(r, r.solution).bounces[r.key.bounce]) return false;
-  return true;
+  if (r.key && win.bounces[r.key.bounce]?.edge !== r.key.edge) return false;
+  return looksClean(r);
+}
+
+/** Geometry a player can read: no corner skims, labels apart, baths inside and clear of the drain. */
+export function looksClean(r: Room): boolean {
+  const win = shoot(r, r.solution);
+  const nearVertex = (p: Vec) => Math.min(...r.table.poly.map((q) => dist(p, q)));
+  if (win.bounces.some((b) => nearVertex(b.p) < 0.25)) return false;
+  if (r.table.pockets.some((pk) => nearVertex(pk.c) < 0.25)) return false;
+  const labels = r.marks.filter((m) => m.label).map(labelSpot);
+  for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) if (dist(labels[i], labels[j]) < 0.25) return false;
+  for (const pl of r.table.pools) {
+    if (inset(r.table.poly, pl.c) < pl.r - BALL_R) return false;
+    if (r.table.pockets.some((pk) => dist(pl.c, pk.c) < pl.r + pk.r + 0.1)) return false;
+  }
+  // One bath for the classic slip plus at most two guards.
+  return r.table.pools.length <= 3;
 }
 
 type Maker = (R: () => number) => Room;
@@ -42,10 +62,10 @@ const real = (R: () => number, a: number, b: number) => a + R() * (b - a);
 const MAKERS: Maker[] = [
   (R) => buildStraight({ w: real(R, 2.9, 3.4), h: real(R, 1.4, 1.8), bx: real(R, 0.7, 1.1), carved: int(R, 112, 148) }, 'r1'),
   (R) => buildCross({ w: 4, h: real(R, 2.0, 2.4), ball: v(real(R, 1.0, 1.5), real(R, 0.5, 0.9)), carved: int(R, 25, 58) }, 'r2'),
-  (R) => buildCorridor({ w: 4.2, h: real(R, 1.2, 1.6), bx: real(R, 0.5, 0.8), carved: int(R, 48, 66), drainAt: 3 }, 'r3a'),
-  (R) => buildCrooked({ w: 5, h0: 1.6, bx: real(R, 0.5, 0.8), lean: [2, 4, 6][int(R, 0, 2)], carved: int(R, 50, 64), tx: real(R, 3.9, 4.3), drainAt: 2 }, 'r3b'),
+  (R) => buildCorridor({ w: 4.6, h: real(R, 1.25, 1.5), bx: real(R, 0.45, 0.65), carved: int(R, 48, 64), drainAt: 2 }, 'r3a'),
+  (R) => buildCrooked({ w: 5, h0: 1.6, bx: real(R, 0.5, 0.8), lean: [4, 6][int(R, 0, 1)], carved: int(R, 50, 64), tx: real(R, 3.9, 4.3), drainAt: 2 }, 'r3b'),
   (R) => buildCorner({ w: 4, h: 2.3, corner: int(R, 62, 80), toCorner: real(R, 1.2, 1.7), exit: int(R, 36, 54) }, 'r4'),
-  (R) => buildHex({ side: 1.6, toCorner: real(R, 0.7, 1.0), arrive: int(R, 20, 33) }, 'r5'),
+  (R) => buildHex({ side: 1.6, toCorner: real(R, 0.6, 1.0), arrive: int(R, 16, 36) }, 'r5'),
   (R) => buildVane({ w: 4.6, h: 3.2, start: v(0.45, 0.8), lane: real(R, 2.4, 2.9), atStart: int(R, 32, 48), atHouse: int(R, 58, 82) }, 'r6'),
   (R) => {
     for (;;) {

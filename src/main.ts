@@ -6,7 +6,7 @@ import '@fontsource/rubik/900.css';
 import './style.css';
 import * as THREE from 'three';
 import { Game } from './game.ts';
-import { authoredRooms, BALL_R, STROKES, type Room } from './levels.ts';
+import { authoredRooms, BALL_R, reachOf, STROKES, type Room } from './levels.ts';
 import { freshRooms } from './variants.ts';
 import { World, type ShotAnim } from './scene.ts';
 import { loadModels } from './models.ts';
@@ -150,8 +150,9 @@ function updateHud() {
   $('room-title').textContent = `חדר ${r.code} · ${r.name}`;
   $('fact').textContent = r.factName;
   $('rule').classList.toggle('hidden', r.mode === 'vane');
+  $('rule').textContent = r.stone ? 'חוק החדר: האבן יוצאת מהקיר באותה זווית שבה פגעה בו' : 'חוק השולחן: הכדור יוצא מהגדה באותה זווית שבה פגע בה';
   $('angle').textContent = `${game.dial}°`;
-  $('angle-cap').textContent = r.mode === 'vane' ? 'סיבוב הפלטה' : r.stone ? 'זווית לקיר' : 'זווית לגדה';
+  $('angle-cap').textContent = r.mode === 'vane' ? 'סיבוב הפלטה' : r.stone ? 'זווית לקיר' : r.fact === 'vertical' ? 'זווית לקו האריחים' : 'זווית לגדה';
   const tokens = $('tokens');
   tokens.innerHTML = '';
   for (let i = 0; i < STROKES; i++) {
@@ -162,8 +163,7 @@ function updateHud() {
   const stars = $('stars');
   stars.innerHTML = '';
   const best = game.scores[game.index]?.stars ?? 0;
-  const potential = game.workedShown ? 1 : game.hintUsed ? 2 : 3 - Math.min(2, game.strokesUsed);
-  const show = best || potential;
+  const show = best || game.potentialStars;
   for (let i = 0; i < 3; i++) {
     const s = document.createElement('span');
     s.className = `star${i < show ? '' : ' off'}`;
@@ -246,7 +246,7 @@ function strike(power: number) {
   const path = game.strike(power);
   if (!path) return;
   const r = game.room;
-  const reach = r.reach * game.lastPower;
+  const reach = reachOf(r, game.lastPower);
   const T = 1.3 + reach * 0.4;
   const v0 = (2 * reach) / T;
   anim = {
@@ -397,7 +397,7 @@ function finishShot() {
     const angles = path.bounces.map((b) => `<bdi dir="ltr">${Math.round(b.angle)}°</bdi>`).join(' · ');
     showCard(
       sc.stars === 3 ? 'מכה מושלמת!' : 'נכנס!',
-      `${r.mode === 'vane' ? 'הפלטה סובבה את האבן' : 'הזוויות בגדות'}: ${angles || `<bdi dir="ltr">${game.dial}°</bdi>`}<br>${unaidedLine()}`,
+      `${r.mode === 'vane' ? 'הפלטה סובבה את האבן' : r.stone ? 'הזוויות בקירות' : 'הזוויות בגדות'}: ${angles || `<bdi dir="ltr">${game.dial}°</bdi>`}<br>${unaidedLine()}`,
       [
         { label: last ? 'לסיום' : 'לחדר הבא ←', cls: 'gold', on: () => nextRoom() },
         { label: 'שוב', cls: 'dark', on: () => replayRoom() },
@@ -416,7 +416,7 @@ function finishShot() {
         { label: 'הבנתי — עוד ניסיון', cls: 'gold', on: () => retry() },
       ]);
     } else {
-      const title = path.outcome === 'pool' ? 'פלופ! לתוך האמבט' : path.outcome === 'short' ? 'נעצר באמצע' : 'החטאה';
+      const title = path.outcome === 'pool' ? 'פלופ! לתוך האמבט' : path.outcome === 'short' ? (r.stone ? 'נעצרה באמצע' : 'נעצר באמצע') : 'החטאה';
       showCard(title, ex?.text ?? '', [{ label: '↻ שוב', cls: 'gold', on: () => retry() }]);
     }
   }
@@ -542,12 +542,12 @@ function showEnd() {
   $('hud').classList.add('hidden');
   const total = game.totalStars;
   const max = game.rooms.length * 3;
-  const firstTries = game.log.filter((l) => l.unaided && l.outcome === 'pocket').length;
+  const firstTries = game.scores.filter((x) => x?.unaided).length;
   openOverlay(
     `<h2>${fresh ? 'סיבוב שולחנות חדשים — הושלם!' : 'עברתם את כל בית המרחץ!'}</h2>
     <p style="font-size:28px">${'★'.repeat(Math.round((total / max) * 5))}<bdi dir="ltr"> ${total}/${max}</bdi></p>
-    <p>מכות ראשונות בלי רמז: <bdi dir="ltr">${firstTries}/${game.rooms.length}</bdi>. דקימוס מוריד בפניכם את הכתר.</p>
-    <p>רוצים עוד? <b>שולחנות חדשים</b> מגרילים מספרים אחרים לכל חדר — כל אחד נבדק במחשב שיש לו בדיוק זווית אחת שנכנסת.</p>
+    <p>מכות ראשונות בלי רמז: <bdi dir="ltr">${firstTries}/${game.rooms.length}</bdi>. דקימוס מסיר בפניכם את הכובע.</p>
+    <p>רוצים עוד? <b>שולחנות חדשים</b> מגרילים מספרים אחרים לכל חדר — כל אחד נבדק במחשב: רק הזווית הנכונה (בסטייה של עד <bdi dir="ltr">1°</bdi>) נכנסת.</p>
     <div class="row"><button class="btn gold" id="e-fresh">שולחנות חדשים</button><button class="btn dark" id="e-again">שוב מההתחלה</button></div>`,
     (box) => {
       box.querySelector('#e-fresh')!.addEventListener('click', () => newRun(true));
