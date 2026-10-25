@@ -57,7 +57,7 @@ async function settle(p, maxMs = 20000) {
   return state(p);
 }
 
-const SOL = { r1: 50, r2: 35, r3a: 55, r3b: 51, r4: 65, r5: 35, r6: 115, r7: 35 };
+const SOL = { r1: 50, r2: 35, r3a: 55, r3b: 51, r4: 65, r5: 32, r6: 115, r7: 38 };
 const W = { width: 1672, height: 941 }; // the mockups' size
 
 // 01 — first 30 seconds: title → play → dial 50° on room 1.
@@ -98,7 +98,7 @@ log('room 1 at 50°:', s.shot.outcome, 'stars', s.stars[0]);
 // 02 — mid-play on the hexagon: strike 35° and capture during the slow-motion last bounce.
 p = await open(W, '?level=6');
 await adv(p, 300);
-await dialTo(p, 35);
+await dialTo(p, 32);
 await strike(p);
 for (let i = 0; i < 60; i++) {
   await adv(p, 80);
@@ -107,7 +107,7 @@ for (let i = 0; i < 60; i++) {
 await adv(p, 250);
 await shot(p, '02-mid-play');
 s = await settle(p);
-log('room 5 at 35°:', s.shot.outcome, 'bounces', s.shot.bounces.map((b) => b.angle).join(','));
+log('room 5 at 32°:', s.shot.outcome, 'bounces', s.shot.bounces.map((b) => b.angle).join(','));
 
 // Hint on room 3א, captured.
 p = await open(W, '?level=3');

@@ -1,0 +1,15 @@
+room 1 aiming: 1 dial 50 givens 130°
+room 1 at 130°: pool | strokes left 2 | 130° היא הזווית שבצד השני של הקו. מד־הזווית מודד מהצד שמסומן 0°.
+room 1 at 50°: pocket stars 2
+room 5 at 32°: pocket bounces 28
+room 3א hint: {"available":true,"open":true,"used":true}
+room 3ב at 55°: short | הזווית 55° הייתה נכונה אילו הגדות היו מקבילות. כאן 88° ≠ 92°: הגדה העליונה נוטה.
+room 6 at 115°: pocket turn 115
+full run: 1:pocket 2:pocket 3א:pocket 3ב:pocket 4:pocket 5:pocket 6:pocket 7:pocket | stars 33333333 | mode done
+mouse drag on room 2 → dial 35 (aimed at 35°)
+Escape → paused
+restart → play aim strokes used 0
+mobile tap + → 91
+mobile strike at 50°: pocket
+fps (1280×720, real time): 43
+console errors: none

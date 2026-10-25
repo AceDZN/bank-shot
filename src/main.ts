@@ -295,8 +295,9 @@ function stepShot(dt: number) {
   const path = a.path;
   const r = game.room;
   if (a.phase === 'roll') {
-    a.t += dt;
-    const sNow = Math.min(a.v0 * a.t - 0.5 * a.decel * a.t * a.t, a.reach);
+    // Decelerate to a stop exactly at the reach; past endT the ball has stopped (never rolls back).
+    a.t = Math.min(a.t + dt, a.endT);
+    const sNow = a.t >= a.endT ? a.reach : Math.min(a.v0 * a.t - 0.5 * a.decel * a.t * a.t, a.reach);
     const prevS = a.s;
     a.s = Math.min(sNow, path.length);
     const p = posAt(path, a.s);
@@ -619,7 +620,11 @@ holdRepeat($('btn-plus'), 1);
 const strikeBtn = $('btn-strike');
 strikeBtn.addEventListener('pointerdown', (e) => {
   e.preventDefault();
-  strikeBtn.setPointerCapture(e.pointerId);
+  try {
+    strikeBtn.setPointerCapture(e.pointerId);
+  } catch {
+    /* capture is a nicety; the press still counts */
+  }
   beginCharge();
 });
 strikeBtn.addEventListener('pointerup', () => releaseCharge());
@@ -649,7 +654,11 @@ canvas.addEventListener('pointerdown', (e) => {
   if (mode !== 'play' || game.phase !== 'aim') return;
   initAudio();
   dragging = true;
-  canvas.setPointerCapture(e.pointerId);
+  try {
+    canvas.setPointerCapture(e.pointerId);
+  } catch {
+    /* ignore */
+  }
   aimAt(e.clientX, e.clientY);
 });
 canvas.addEventListener('pointermove', (e) => {

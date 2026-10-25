@@ -20,8 +20,8 @@ Actual: [`docs/captures/`](captures/), captured by `tests/browser-capture.mjs` i
 
 | Aspect | Target | Actual | Verdict |
 |---|---|---|---|
-| Moment | Ball mid-flight near the drain, glowing path with arrows, angle labels at the cushion hits, "הילוך איטי" badge | Captured during the slow-motion last bounce: glowing run line, the measured angle (25°) pops at the cushion hit, "הילוך איטי" badge, camera pushed toward the drain | Match |
-| Numbers | Target shows 50° / 10° | Game uses 35° / 25° (see CURRICULUM.md deviations) | Intended difference |
+| Moment | Ball mid-flight near the drain, glowing path with arrows, angle labels at the cushion hits, "הילוך איטי" badge | Captured during the slow-motion last bounce: glowing run line, the measured angle (28°) pops at the cushion hit, "הילוך איטי" badge, camera pushed toward the drain | Match |
+| Numbers | Target shows 50° / 10° | Game uses 32° / 28° (see CURRICULUM.md deviations) | Intended difference |
 | Character | Decimus cheering at the left | Decimus out of frame during the push-in (he is placed for the resting camera) | Gap |
 | Motion blur / speed lines | Strong radial blur | None (would hurt readability and reduced-motion) | Intentional |
 

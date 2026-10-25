@@ -12,8 +12,10 @@
 - Real-browser playthrough script (`npm run capture`): all 8 tables sink at the deduced angles by keyboard; mistakes, hint, trap, mouse-drag aiming, pause/restart, mobile touch.
 - `docs/VISUAL_REVIEW.md`, `CURRICULUM.md`, `README.md`.
 
+- Independent math review (`docs/MATH_REVIEW.md`): all 8 answers re-derived by hand; its 8 MUST FIX and most SHOULD FIX items applied (protractor texture offset, run-long room history against restart farming, explanations only quote the carved cushion, per-room rule text, Workbook-accurate Hebrew, answer stubs removed, room 5 → 32° and room 7 → 38° so no constant wins three tables, stricter fairness for generated tables). 105 unit tests.
+- `PLAYTEST.md` written; FPS measured (60, vsync cap, M2 Max).
+
 ## Next
 
-- Apply the math reviewer's findings (`docs/MATH_REVIEW.md`).
 - Publish to GitHub once the user approves; Vercel deploy only on request.
 - Student playtests.
