@@ -465,7 +465,7 @@ export class World {
     const xs = room.table.poly.map((p) => p.x);
     const ys = room.table.poly.map((p) => p.y);
     this.center = v((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2);
-    this.camYaw = room.mode === 'vane' ? -12 : 0;
+    this.camYaw = this.camYawFor(room);
 
     const shapeOf = (pts: Vec[]) => new THREE.Shape(pts.map((p) => new THREE.Vector2(p.x - this.center.x, p.y - this.center.y)));
     const inner = offsetPoly(room.table.poly, BALL_R);
@@ -678,7 +678,13 @@ export class World {
       mats.push(labelMat);
       const lab = new THREE.Mesh(new THREE.PlaneGeometry(hgt * aspect, hgt), labelMat);
       const mid = (m.labelAt ? m.labelAt.heading : m.from + m.sweep / 2) * RAD;
-      const rr = m.labelAt ? m.labelAt.r : m.radius + 0.06 + hgt * 0.5 + (m.sweep < 25 ? 0.12 : 0);
+      // Half the label's extent along the radial direction (the label turns with the camera).
+      const yawR = this.camYawFor(this.room) * RAD;
+      const ext = (Math.abs(Math.cos(mid - yawR)) * hgt * aspect + Math.abs(Math.sin(mid - yawR)) * hgt) / 2;
+      const pivot = this.room.mode === 'vane' && this.room.table.vane ? this.room.table.vane.p : this.room.ball;
+      const atPivot = Math.hypot(m.at.x - pivot.x, m.at.y - pivot.y) < 1e-6;
+      const inner = Math.max(m.radius, atPivot ? 0.46 : 0);
+      const rr = m.labelAt ? m.labelAt.r : inner + 0.05 + ext + (m.sweep < 25 ? 0.1 : 0);
       lab.position.set(Math.cos(mid) * rr, Math.sin(mid) * rr, 0.002);
       // Keep the label clear of the cushions: push it inward from any edge it crowds.
       const poly = this.room.table.poly;
@@ -718,7 +724,12 @@ export class World {
     this.marks.set(m.id, { mark: m, group: g, mats, base: mats.map((x) => x.opacity) });
   }
 
+  /** Portrait screens look along the table's long side so it fills the phone. */
   camYawFor(room: Room) {
+    const xs = room.table.poly.map((p) => p.x);
+    const ys = room.table.poly.map((p) => p.y);
+    const wide = Math.max(...xs) - Math.min(...xs) > 1.25 * (Math.max(...ys) - Math.min(...ys));
+    if (this.camera.aspect < 0.8 && wide) return -90;
     return room.mode === 'vane' ? -12 : 0;
   }
 
@@ -989,12 +1000,19 @@ export class World {
     this.camGoal.pos.lerp(target.clone().add(new THREE.Vector3(0, 1.2, 1.1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.camYaw * RAD)), amount * 0.55);
   }
 
-  resize(w: number, h: number) {
+  /** Returns true when the room had to be rebuilt (portrait ↔ landscape changes the view). */
+  resize(w: number, h: number): boolean {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.fov = w / h < 0.8 ? 58 : 48;
     this.camera.updateProjectionMatrix();
-    if (this.room) this.frameCamera(true);
+    if (!this.room) return false;
+    if (this.camYawFor(this.room) !== this.camYaw) {
+      this.buildRoom(this.room);
+      return true;
+    }
+    this.frameCamera(true);
+    return false;
   }
 
   // ─── Frame ──────────────────────────────────────────────────────────────────────────────────

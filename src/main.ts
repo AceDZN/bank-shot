@@ -90,9 +90,14 @@ async function boot() {
 }
 
 function resize() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  world?.resize(w, h);
+  if (!world) return;
+  if (world.resize(window.innerWidth, window.innerHeight)) {
+    // The table was rebuilt for the new orientation: restore what's on it.
+    world.setDial(game.dial);
+    world.showAim(game.phase === 'aim');
+    world.setHint(game.hintOpen ? (game.room.hint?.marks ?? []) : []);
+    if (game.path && game.phase !== 'aim' && !anim) world.showGhost(game.path);
+  }
 }
 window.addEventListener('resize', resize);
 

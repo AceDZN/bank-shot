@@ -168,15 +168,16 @@ function guardUnique(room: Room, tries = 8): void {
     const path = shoot(room, stray);
     const end = path.length;
     let placed = false;
-    for (const r of [0.15, 0.12, 0.1]) {
+    // Prefer a spot well clear of labels and the ball; relax only if nothing fits.
+    for (const [r, slack] of [[0.15, 0.12], [0.12, 0.12], [0.1, 0.06], [0.08, 0.02]] as const) {
       for (let s = 0.7; s < end - 0.15 && !placed; s += 0.05) {
         const c = pointAt(path, s);
         const clear = Math.min(...keep.map((k) => distToPolyline(c, k)));
         const fromBall = dist(c, room.ball);
         const fromDrain = Math.min(...room.table.pockets.map((pk) => dist(c, pk.c)));
-        const fromMarks = Math.min(...room.marks.map((m) => dist(c, m.at) - m.radius));
+        const fromMarks = Math.min(...room.marks.map((m) => Math.min(dist(c, m.at) - m.radius, dist(c, labelSpot(m)) - 0.22)));
         const fromPools = Math.min(Infinity, ...room.table.pools.map((pl) => dist(c, pl.c) - pl.r));
-        if (clear > r + 0.08 && fromBall > r + 0.3 && fromDrain > r + 0.15 && fromMarks > r + 0.12 && fromPools > r + 0.12) {
+        if (clear > r + 0.08 && fromBall > r + 0.3 && fromDrain > r + 0.15 && fromMarks > r + slack && fromPools > r + 0.12) {
           room.table.pools.push({ c, r });
           placed = true;
         }
@@ -185,6 +186,12 @@ function guardUnique(room: Room, tries = 8): void {
     }
     if (!placed) return;
   }
+}
+
+/** Roughly where a mark's label sits (the scene places it just outside the arc's middle). */
+function labelSpot(m: AngleMark): Vec {
+  if (m.labelAt) return along(m.at, m.labelAt.heading, m.labelAt.r);
+  return along(m.at, m.from + m.sweep / 2, m.radius + 0.2);
 }
 
 function pointAt(p: PathResult, s: number): Vec {
@@ -227,8 +234,8 @@ export function buildStraight(p: StraightParams, id = 'r1'): Room {
     mode: 'shot',
     solution: sol,
     marks: [
-      mark('given', ball, sol, 180 - sol, deg(p.carved), 'given', 0.3, 0.5),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
+      mark('given', ball, sol, 180 - sol, deg(p.carved), 'given', 0.56, 0.75),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.5, 0),
     ],
     lines: [{ a: ball, b: along(ball, sol, 0.5), kind: 'worn' }],
     hint: { marks: ['given', 'need'], text: 'זוויות צמודות: שתי הזוויות על הגדה הישרה משלימות זו את זו לזווית שטוחה.' },
@@ -271,8 +278,8 @@ export function buildCross(p: CrossParams, id = 'r2'): Room {
     mode: 'shot',
     solution: sol,
     marks: [
-      mark('given', p.ball, 180, sol, deg(p.carved), 'given', 0.34, 0),
-      mark('need', p.ball, 0, sol, '?', 'unknown', 0.3, 0),
+      mark('given', p.ball, 180, sol, deg(p.carved), 'given', 0.56, 0),
+      mark('need', p.ball, 0, sol, '?', 'unknown', 0.5, 0),
     ],
     lines: [
       // The tile line the ball sits on, and the crossing line; the mosaic ahead of the ball is worn away.
@@ -324,7 +331,7 @@ export function buildCorridor(p: CorridorParams, id = 'r3a'): Room {
     solution: sol,
     marks: [
       mark('given', T, 180, sol, deg(p.carved), 'given', 0.3, 0.5),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.5, 0),
     ],
     lines: [
       { a: v(0, 0), b: v(p.w, 0), kind: 'parallel' },
@@ -387,7 +394,7 @@ export function buildCrooked(p: CrookedParams, id = 'r3b'): Room {
     marks: [
       mark('given', T, topLeftRay, p.carved, deg(p.carved), 'given', 0.42, 0.5),
       { ...mark('lean', T, topLeftRay, p.lean, deg(p.lean), 'given', 0.75, 0), labelAt: { heading: 190, r: 1.15 } },
-      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.5, 0),
       mark('trP', P, 0, trAngle, deg(Math.round(trAngle)), 'given', 0.22, 0),
       mark('trQ', Q, topLeftRay, wrap(180 + trAngle) - topLeftRay, deg(Math.round(wrap(180 + trAngle) - topLeftRay)), 'given', 0.22, 0),
     ],
@@ -463,7 +470,7 @@ export function buildCorner(p: CornerParams, id = 'r4'): Room {
       mark('corner', C, slant, 180 - slant, deg(p.corner), 'corner', 0.3, 0),
       mark('given', Q, slant, p.exit, deg(p.exit), 'given', 0.3, 0.5),
       mark('arrive', Q, wrap(slant + 180 - p.exit), p.exit, '', 'helper', 0.24, 0),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.5, 0),
     ],
     lines: [{ a: Q, b: along(Q, slant + p.exit, 0.5), kind: 'worn' }],
     hint: {
@@ -528,7 +535,7 @@ export function buildHex(p: HexParams, id = 'r5'): Room {
       mark('corner', V1, edge2, inner, '', 'corner', 0.26, 0),
       mark('given', Q, edge2, p.arrive, deg(p.arrive), 'given', 0.34, 0.5),
       mark('arrive', Q, wrap(edge2 + 180 - p.arrive), p.arrive, '', 'helper', 0.24, 0),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.5, 0),
     ],
     lines: [{ a: Q, b: along(Q, edge2 + p.arrive, 0.5), kind: 'worn' }],
     hint: {
@@ -590,7 +597,7 @@ export function buildVane(p: VaneParams, id = 'r6'): Room {
     marks: [
       mark('atStart', p.start, 0, p.atStart, deg(p.atStart), 'given', 0.42, 0),
       mark('atHouse', G, gs, heading(sub(P, G)) - gs, deg(p.atHouse), 'given', 0.36, 0),
-      mark('need', P, 0, sol, '?', 'unknown', 0.3, 0),
+      mark('need', P, 0, sol, '?', 'unknown', 0.5, 0),
       mark('inner', P, heading(sub(G, P)), atVane, '', 'helper', 0.22, 0),
     ],
     lines: [

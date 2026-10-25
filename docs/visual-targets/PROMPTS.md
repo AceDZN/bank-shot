@@ -2,7 +2,7 @@
 
 - Date: 2026-10-25
 - Tool: ChatGPT web app (chatgpt.com, the user's signed-in Chrome), built-in image generation, model picker showed "Instant".
-- Chat: https://chatgpt.com/c/6ade7359-68bc-83ed-877f-06846816abec (one chat, five turns, in a tab opened for this crew)
+- Chat: https://chatgpt.com/c/6ade7359-68bc-83ed-877f-06846816abec (one chat, six turns, in a tab opened for this crew)
 - Saved through the page (blob of the rendered image → browser download → moved here). Native size 1672×941 (≈16:9), PNG.
 
 These are **design targets, not evidence of the implemented game**. Generated Hebrew text is unreliable: copy the layout, not the text. The geometry in the images is illustrative only; the real angles come from the pure rules module.
@@ -16,6 +16,7 @@ These are **design targets, not evidence of the implemented game**. Generated He
 | `03-failure.png` | 3 | Kept. Ball splashes into the plunge pool, faint ghost line across the table, gold circle on the "130°" arc next to the "?" arc, explanation card with a small adjacent-angles diagram and `130° + 50° = 180°`, round gold "שוב" button, attendant facepalming. **Do not copy the card's headline text**: the model wrote a "you chose the wrong angle!"-style line, which the identity forbids (no "wrong!" cards). Use a neutral one-line explanation of the rule instead. |
 | `04-curling.png` | 4 | Kept. Low, long camera behind a granite curling stone with a bronze handle on wet reflective marble, bronze vane post with a glowing "115°" arc, floor arcs "40°" and "75°" on gold tile lines, drain ring far down the lane, lion fountain and pool on the left, attendant cheering on the pool edge. HUD with curling-stone stroke tokens, `− 115° +`, strike button, hint lamp. |
 | `ref-attendant-tpose.png` | 5 | Not a gameplay mockup: a clean T-pose reference of Decimus on grey, used as the Tripo image-to-model input for the rigged attendant. |
+| `ref-oil-lamp.png` | 6 | Not a gameplay mockup: a reference of a flat Roman lucerna, used as the Tripo image-to-model input after Tripo's text-to-model produced a teapot. |
 
 Rejected iterations: none. Every turn produced a usable target on the first generation, so no regenerations were spent.
 
@@ -49,4 +50,10 @@ Same style, same game, same attendant, same HUD style. Now image 4 (landscape 16
 
 ```
 Now a 3D-model reference image (square 1:1), NOT a game screenshot: the same cheeky Roman bath attendant character "Decimus" as a single full-body stylized 3D character (Pixar-like proportions, slightly bigger head, teen-to-young-adult, not realistic), standing in a clean symmetric T-pose, facing the camera straight on, arms straight out horizontally, legs slightly apart, feet flat. Short cream tunic with terracotta trim and a belt, a white towel draped over his left shoulder (tight to the body so it does not cover the arm), leather sandals, curly dark hair, no laurel wreath, no props in hands, cheeky grin. Plain light grey background, even soft studio lighting, no shadows on the background, whole body visible with margin, no text.
+```
+
+### Turn 6 → `ref-oil-lamp.png` (Tripo input, not a mockup)
+
+```
+Now another 3D-model reference image (square 1:1), not a game screenshot: a single ancient Roman terracotta oil lamp (lucerna), seen from a 3/4 top-front angle. It is LOW and FLAT like a small closed saucer: a round flat body about as tall as a finger, a shallow concave top disc with a small relief rosette and a small filling hole in the center, ONE short rounded nozzle sticking out horizontally at the front with a small dark wick hole, and a small vertical ring handle at the back. NOT a teapot, NOT a jug: no neck, no lid, no spout rising upward, no tall body. Warm orange-red fired clay, slightly worn, stylized realistic like a game prop. Plain light grey background, soft even studio light, whole object visible with margin, no flame, no text.
 ```
