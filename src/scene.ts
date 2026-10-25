@@ -409,6 +409,7 @@ export class World {
       this.actions.idle = pick('idle', 'breath', 'stand');
       this.actions.cheer = pick('cheer', 'clap', 'celebrat', 'victory', 'happy', 'jump');
       this.actions.facepalm = pick('facepalm', 'disappoint', 'sad', 'defeat', 'upset', 'shake');
+      this.actions.disappointed = pick('disappoint', 'frustrat', 'sad') ?? this.actions.facepalm;
       if (!this.actions.idle && clips[0]) this.actions.idle = this.mixer.clipAction(clips[0]);
       this.play('idle');
     } else {
@@ -424,7 +425,9 @@ export class World {
     this.scene.add(this.attendant);
   }
 
-  play(name: 'idle' | 'cheer' | 'facepalm') {
+  private reactionLeft = 0;
+
+  play(name: 'idle' | 'cheer' | 'facepalm' | 'disappointed') {
     const a = this.actions[name];
     if (!a || !this.mixer) return;
     if (this.currentAction === a && name === 'idle') return;
@@ -434,13 +437,8 @@ export class World {
     a.fadeIn(0.25).play();
     if (this.currentAction && this.currentAction !== a) this.currentAction.fadeOut(0.25);
     this.currentAction = a;
-    if (name !== 'idle') {
-      const back = () => {
-        this.mixer!.removeEventListener('finished', back);
-        this.play('idle');
-      };
-      this.mixer.addEventListener('finished', back);
-    }
+    // Reactions are long Tripo clips; cut back to idle after a few seconds.
+    this.reactionLeft = name === 'idle' ? 0 : Math.min(a.getClip().duration, name === 'cheer' ? 4.5 : 4);
   }
 
   // ─── Room ───────────────────────────────────────────────────────────────────────────────────
@@ -544,10 +542,14 @@ export class World {
       const pos3 = this.w(spot, CUSHION_H);
       const lamp = lampModel ? fitHeight(lampModel.clone(true), 0.11) : this.fallbackLamp();
       lamp.position.copy(pos3);
-      lamp.rotation.y = Math.random() * Math.PI;
+      // Nozzle toward the table centre; the Tripo lamp's nozzle tip is at +Z, ~0.6 of its height.
+      const toC = sub(this.center, c);
+      const rot = Math.atan2(toC.x, toC.y);
+      lamp.rotation.y = rot;
       shadowsOn(lamp, true, false);
       this.table.add(lamp);
-      this.addFlame(pos3.clone().add(new THREE.Vector3(0, lampModel ? 0.15 : 0.12, 0)), 0.1, i === 0 || i === 2, this.table);
+      const tip = lampModel ? new THREE.Vector3(0, 0.075, 0.145).applyAxisAngle(new THREE.Vector3(0, 1, 0), rot) : new THREE.Vector3(0, 0.12, 0);
+      this.addFlame(pos3.clone().add(tip), 0.1, i === 0 || i === 2, this.table);
     });
 
     // Vane.
@@ -1025,6 +1027,10 @@ export class World {
     this.time += dt;
     const t = this.time;
     this.mixer?.update(dt);
+    if (this.reactionLeft > 0) {
+      this.reactionLeft -= dt;
+      if (this.reactionLeft <= 0) this.play('idle');
+    }
     // Camera.
     const k = 1 - Math.exp(-dt * 3.2);
     this.camNow.pos.lerp(this.camGoal.pos, k);

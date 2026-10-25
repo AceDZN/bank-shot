@@ -401,10 +401,9 @@ function finishShot() {
     world.showGhost(path);
     const ex = game.explanation;
     if (ex?.mark) world.setFocus(ex.mark);
-    if (path.outcome !== 'short' || game.strokesUsed > 0) {
-      world.play('facepalm');
-      sfx.whistle(false);
-    }
+    if (path.outcome === 'pool') world.play('facepalm');
+    else world.play('disappointed');
+    sfx.whistle(false);
     if (game.phase === 'worked') {
       showCard('דקימוס מסביר', `${ex?.text ?? ''}<span class="math">${r.worked.join('<br>')}</span>`, [
         { label: 'הבנתי — עוד ניסיון', cls: 'gold', on: () => retry() },
