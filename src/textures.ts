@@ -241,7 +241,7 @@ export function hallFloorTexture(): THREE.CanvasTexture {
  * The brass protractor: a half disc, 0° on the right, 180° on the left, ticks every degree and
  * numbers every 10° (Western digits read left to right).
  */
-export function protractorTexture(): THREE.CanvasTexture {
+export function protractorTexture(reversed = false): THREE.CanvasTexture {
   const S = 1024;
   const [c, g] = canvas(S, S / 2 + 40);
   const cx = S / 2;
@@ -283,7 +283,8 @@ export function protractorTexture(): THREE.CanvasTexture {
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   for (let d = 0; d <= 180; d += 10) {
-    const a = (d * Math.PI) / 180;
+    // Reversed: 0° on the left (a wall measured clockwise).
+    const a = ((reversed ? 180 - d : d) * Math.PI) / 180;
     const x = cx + Math.cos(a) * R * 0.78;
     const y = cy - Math.sin(a) * R * 0.78;
     g.save();

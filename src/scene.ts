@@ -74,6 +74,7 @@ export class World {
   stoneObj: THREE.Object3D | null = null;
   protractor = new THREE.Group();
   needle!: THREE.Mesh;
+  protractorDisc!: THREE.Mesh;
   aim!: THREE.Mesh;
   vane = new THREE.Group();
   vaneBlade = new THREE.Group();
@@ -104,6 +105,7 @@ export class World {
     marble: marbleTexture(7, '#e8c4a2', 'rgba(150,58,34,'),
     marbleDark: marbleTexture(21, '#a9765a', 'rgba(90,36,20,'),
     protractor: protractorTexture(),
+    protractorRev: protractorTexture(true),
     soft: softDot(),
     flame: softDot('rgba(255,230,160,1)', 'rgba(255,120,30,0)'),
     grate: grateTexture(),
@@ -323,7 +325,7 @@ export class World {
     this.ballMesh.castShadow = true;
     this.ball.add(this.ballMesh);
     const stone = this.models.stone?.scene;
-    this.stoneObj = stone ? fitHeight(stone.clone(true), BALL_R * 2.3) : this.fallbackStone();
+    this.stoneObj = stone ? fitHeight(stone.clone(true), BALL_R * 2.6) : this.fallbackStone();
     shadowsOn(this.stoneObj, true, false);
     this.stoneObj.visible = false;
     this.ball.add(this.stoneObj);
@@ -359,6 +361,7 @@ export class World {
       new THREE.MeshStandardMaterial({ map: this.texCache.protractor, metalness: 0.55, roughness: 0.32, transparent: true, opacity: 0.93, envMapIntensity: 1.3 }),
     );
     disc.position.z = 0.012;
+    this.protractorDisc = disc;
     this.protractor.add(disc);
     this.needle = new THREE.Mesh(new THREE.PlaneGeometry(R * 1.02, 0.012), new THREE.MeshBasicMaterial({ color: '#3b1f04' }));
     this.needle.geometry.translate(R * 0.51, 0, 0);
@@ -462,7 +465,7 @@ export class World {
     const xs = room.table.poly.map((p) => p.x);
     const ys = room.table.poly.map((p) => p.y);
     this.center = v((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2);
-    this.camYaw = room.mode === 'vane' ? -62 : 0;
+    this.camYaw = room.mode === 'vane' ? -12 : 0;
 
     const shapeOf = (pts: Vec[]) => new THREE.Shape(pts.map((p) => new THREE.Vector2(p.x - this.center.x, p.y - this.center.y)));
     const inner = offsetPoly(room.table.poly, BALL_R);
@@ -524,7 +527,7 @@ export class World {
     // Angle marks.
     for (const m of room.marks) this.addMark(m);
     // Drains and baths.
-    for (const pk of room.table.pockets) this.addDrain(pk.c, pk.r);
+    for (const pk of room.table.pockets) (room.stone ? this.addHouse(pk.c, pk.r) : this.addDrain(pk.c, pk.r));
     for (const pl of room.table.pools) this.addBath(pl.c, pl.r);
     // Regular-hexagon ticks: equal-side marks on every cushion.
     if (room.fact === 'polygon') this.addEqualTicks(room.table.poly);
@@ -560,14 +563,10 @@ export class World {
     const pivot = room.mode === 'vane' && room.table.vane ? room.table.vane.p : room.ball;
     this.protractor.position.copy(this.lp(pivot, 0));
     this.protractor.rotation.z = (room.dialSign === 1 ? room.base : room.base - 180) * RAD;
+    (this.protractorDisc.material as THREE.MeshStandardMaterial).map = room.dialSign === 1 ? this.texCache.protractor : this.texCache.protractorRev;
     this.aim.position.copy(this.lp(pivot, 0.02));
 
     // Attendant at the left of the table, facing the player and the table.
-    const left = Math.min(...outer.map((p) => p.x)) - this.center.x;
-    const nearY = Math.min(...outer.map((p) => p.y)) - this.center.y;
-    // He stands just off the near-left corner, half in front of the table, like a rival waiting his turn.
-    this.attendant.position.set(left - 0.05, -TABLE_DROP, -(nearY - 0.45));
-    this.attendant.rotation.y = 0.55;
     this.frameCamera(true);
   }
 
@@ -674,13 +673,43 @@ export class World {
     if (m.label) {
       const big = m.label === '?' ? 150 : 120;
       const { texture, aspect } = labelTexture(m.label, { color: m.kind === 'unknown' ? '#fff3cf' : '#f6c75a', size: big, glow: m.kind === 'unknown' ? 'rgba(255,240,190,0.9)' : 'rgba(255,190,80,0.8)' });
-      const hgt = m.kind === 'corner' ? 0.15 : 0.19;
+      const hgt = m.kind === 'corner' ? 0.18 : 0.23;
       const labelMat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false });
       mats.push(labelMat);
       const lab = new THREE.Mesh(new THREE.PlaneGeometry(hgt * aspect, hgt), labelMat);
-      const mid = (m.from + m.sweep / 2) * RAD;
-      const rr = m.radius + 0.06 + hgt * 0.5 + (m.sweep < 25 ? 0.12 : 0);
+      const mid = (m.labelAt ? m.labelAt.heading : m.from + m.sweep / 2) * RAD;
+      const rr = m.labelAt ? m.labelAt.r : m.radius + 0.06 + hgt * 0.5 + (m.sweep < 25 ? 0.12 : 0);
       lab.position.set(Math.cos(mid) * rr, Math.sin(mid) * rr, 0.002);
+      // Keep the label clear of the cushions: push it inward from any edge it crowds.
+      const poly = this.room.table.poly;
+      const clearance = hgt * 0.6 + 0.04;
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < poly.length; i++) {
+          const A = poly[i];
+          const B = poly[(i + 1) % poly.length];
+          const e = norm(sub(B, A));
+          const inward = v(-e.y, e.x);
+          const P = v(m.at.x + lab.position.x, m.at.y + lab.position.y);
+          const dIn = (P.x - A.x) * inward.x + (P.y - A.y) * inward.y;
+          if (dIn < clearance) {
+            lab.position.x += inward.x * (clearance - dIn);
+            lab.position.y += inward.y * (clearance - dIn);
+          }
+        }
+      }
+      if (m.labelAt) {
+        // Leader from the middle of the thin arc to its label.
+        const am = (m.from + m.sweep / 2) * RAD;
+        const a = new THREE.Vector2(Math.cos(am) * m.radius, Math.sin(am) * m.radius);
+        const b = new THREE.Vector2(Math.cos(mid) * (rr - hgt * 0.45), Math.sin(mid) * (rr - hgt * 0.45));
+        const L = a.distanceTo(b);
+        const leadMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, depthWrite: false });
+        mats.push(leadMat);
+        const lead = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.012), leadMat);
+        lead.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, 0.001);
+        lead.rotation.z = Math.atan2(b.y - a.y, b.x - a.x);
+        g.add(lead);
+      }
       lab.rotation.z = this.camYawFor(this.room) * RAD;
       lab.userData.label = true;
       g.add(lab);
@@ -690,7 +719,7 @@ export class World {
   }
 
   camYawFor(room: Room) {
-    return room.mode === 'vane' ? -62 : 0;
+    return room.mode === 'vane' ? -12 : 0;
   }
 
   private addDrain(c: Vec, r: number) {
@@ -708,8 +737,32 @@ export class World {
     this.plane.add(g);
   }
 
+  /** Curling target: concentric rings in bathhouse colours around a small drain. */
+  private addHouse(c: Vec, r: number) {
+    const g = new THREE.Group();
+    g.position.copy(this.lp(c, 0.001));
+    const rings: [number, string][] = [
+      [0.24, '#b5583a'],
+      [0.18, '#efe3cf'],
+      [0.13, '#1f6f72'],
+      [0.09, '#efe3cf'],
+    ];
+    rings.forEach(([R, col], i) => {
+      const m = new THREE.Mesh(new THREE.CircleGeometry(R, 48), new THREE.MeshStandardMaterial({ color: col, roughness: 0.35, transparent: true, opacity: 0.85 }));
+      m.position.z = i * 0.0004;
+      g.add(m);
+    });
+    const hole = new THREE.Mesh(new THREE.CircleGeometry(r + 0.02, 32), new THREE.MeshStandardMaterial({ map: this.texCache.grate, metalness: 0.6, roughness: 0.4 }));
+    hole.position.z = 0.002;
+    g.add(hole);
+    const glow = new THREE.Mesh(new THREE.RingGeometry(0.24, 0.28, 48), new THREE.MeshBasicMaterial({ color: '#ffcf70', transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.userData.pulse = true;
+    g.add(glow);
+    this.plane.add(g);
+  }
+
   private addBath(c: Vec, r: number) {
-    const R = r + BALL_R * 0.6;
+    const R = r;
     const g = new THREE.Group();
     g.position.copy(this.lp(c, 0.0015));
     const water = new THREE.Mesh(new THREE.CircleGeometry(R, 48), this.waterMaterial(0.95));
@@ -851,13 +904,20 @@ export class World {
     const outer = offsetPoly(room.table.poly, BALL_R + CUSHION_W);
     const pts = outer.map((p) => this.w(p, CUSHION_H));
     const yaw = this.camYaw * RAD;
-    const pitch = (room.mode === 'vane' ? 40 : 47) * RAD;
+    // Long shallow tables (the corridors) get a steeper view so the far cushion stays readable.
+    const xs = room.table.poly.map((p) => p.x);
+    const ys = room.table.poly.map((p) => p.y);
+    const ratio = (Math.max(...ys) - Math.min(...ys)) / (Math.max(...xs) - Math.min(...xs));
+    const pitch = (room.mode === 'vane' ? 50 : ratio < 0.4 ? 60 : 47) * RAD;
     const dirv = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
     const portrait = this.camera.aspect < 1;
     // Screen window for the table (NDC): leave the corners to the HUD and the bottom to the panel.
     const top = portrait ? 0.62 : 0.8;
     const bottom = portrait ? -0.62 : -0.56;
-    const fitX = portrait ? 0.97 : 0.9;
+    // Landscape leaves the left edge to Decimus, like the mockups.
+    const xl = portrait ? -0.97 : -0.66;
+    const xr = portrait ? 0.97 : 0.9;
+    const fitX = (xr - xl) / 2;
     const cam = this.camera.clone();
     const look = new THREE.Vector3();
     const bbox = (d: number) => {
@@ -890,7 +950,7 @@ export class World {
       d = hi;
       const bb = bbox(d);
       const dy = (bb.y0 + bb.y1) / 2 - (top + bottom) / 2;
-      const dx = (bb.x0 + bb.x1) / 2;
+      const dx = (bb.x0 + bb.x1) / 2 - (xl + xr) / 2;
       const halfH = Math.tan((this.camera.fov * RAD) / 2) * d;
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
       const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
@@ -905,6 +965,17 @@ export class World {
       this.camNow.look.copy(this.camBase.look);
       this.camera.position.copy(this.camNow.pos);
       this.camera.lookAt(this.camNow.look);
+    }
+    // Stand Decimus where a fixed screen spot meets the hall floor.
+    cam.position.copy(this.camBase.pos);
+    cam.lookAt(this.camBase.look);
+    cam.updateMatrixWorld();
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(portrait ? -0.72 : -0.84, portrait ? -0.5 : -0.62), cam);
+    const feet = new THREE.Vector3();
+    if (ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), TABLE_DROP), feet)) {
+      this.attendant.position.copy(feet);
+      this.attendant.rotation.y = yaw + 0.35;
     }
   }
 

@@ -41,6 +41,8 @@ export interface AngleMark {
   radius: number;
   /** Length of the two rays drawn from the vertex (0 = arc only). */
   rays: number;
+  /** Optional label placement (heading and distance from the vertex) for thin arcs; a leader line connects it. */
+  labelAt?: { heading: number; r: number };
 }
 
 export interface TileLine {
@@ -174,7 +176,7 @@ function guardUnique(room: Room, tries = 8): void {
         const fromDrain = Math.min(...room.table.pockets.map((pk) => dist(c, pk.c)));
         const fromMarks = Math.min(...room.marks.map((m) => dist(c, m.at) - m.radius));
         const fromPools = Math.min(Infinity, ...room.table.pools.map((pl) => dist(c, pl.c) - pl.r));
-        if (clear > r + 0.08 && fromBall > r + 0.3 && fromDrain > r + 0.15 && fromMarks > r + 0.12 && fromPools > r + 0.05) {
+        if (clear > r + 0.08 && fromBall > r + 0.3 && fromDrain > r + 0.15 && fromMarks > r + 0.12 && fromPools > r + 0.12) {
           room.table.pools.push({ c, r });
           placed = true;
         }
@@ -226,7 +228,7 @@ export function buildStraight(p: StraightParams, id = 'r1'): Room {
     solution: sol,
     marks: [
       mark('given', ball, sol, 180 - sol, deg(p.carved), 'given', 0.3, 0.5),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.22, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
     ],
     lines: [{ a: ball, b: along(ball, sol, 0.5), kind: 'worn' }],
     hint: { marks: ['given', 'need'], text: 'זוויות צמודות: שתי הזוויות על הגדה הישרה משלימות זו את זו לזווית שטוחה.' },
@@ -270,7 +272,7 @@ export function buildCross(p: CrossParams, id = 'r2'): Room {
     solution: sol,
     marks: [
       mark('given', p.ball, 180, sol, deg(p.carved), 'given', 0.34, 0),
-      mark('need', p.ball, 0, sol, '?', 'unknown', 0.24, 0),
+      mark('need', p.ball, 0, sol, '?', 'unknown', 0.3, 0),
     ],
     lines: [
       // The tile line the ball sits on, and the crossing line; the mosaic ahead of the ball is worn away.
@@ -322,7 +324,7 @@ export function buildCorridor(p: CorridorParams, id = 'r3a'): Room {
     solution: sol,
     marks: [
       mark('given', T, 180, sol, deg(p.carved), 'given', 0.3, 0.5),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.24, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
     ],
     lines: [
       { a: v(0, 0), b: v(p.w, 0), kind: 'parallel' },
@@ -384,8 +386,8 @@ export function buildCrooked(p: CrookedParams, id = 'r3b'): Room {
     solution: sol,
     marks: [
       mark('given', T, topLeftRay, p.carved, deg(p.carved), 'given', 0.42, 0.5),
-      mark('lean', T, topLeftRay, p.lean, deg(p.lean), 'given', 0.75, 0),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.24, 0),
+      { ...mark('lean', T, topLeftRay, p.lean, deg(p.lean), 'given', 0.75, 0), labelAt: { heading: 190, r: 1.15 } },
+      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
       mark('trP', P, 0, trAngle, deg(Math.round(trAngle)), 'given', 0.22, 0),
       mark('trQ', Q, topLeftRay, wrap(180 + trAngle) - topLeftRay, deg(Math.round(wrap(180 + trAngle) - topLeftRay)), 'given', 0.22, 0),
     ],
@@ -461,7 +463,7 @@ export function buildCorner(p: CornerParams, id = 'r4'): Room {
       mark('corner', C, slant, 180 - slant, deg(p.corner), 'corner', 0.3, 0),
       mark('given', Q, slant, p.exit, deg(p.exit), 'given', 0.3, 0.5),
       mark('arrive', Q, wrap(slant + 180 - p.exit), p.exit, '', 'helper', 0.24, 0),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.24, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
     ],
     lines: [{ a: Q, b: along(Q, slant + p.exit, 0.5), kind: 'worn' }],
     hint: {
@@ -526,7 +528,7 @@ export function buildHex(p: HexParams, id = 'r5'): Room {
       mark('corner', V1, edge2, inner, '', 'corner', 0.26, 0),
       mark('given', Q, edge2, p.arrive, deg(p.arrive), 'given', 0.34, 0.5),
       mark('arrive', Q, wrap(edge2 + 180 - p.arrive), p.arrive, '', 'helper', 0.24, 0),
-      mark('need', ball, 0, sol, '?', 'unknown', 0.24, 0),
+      mark('need', ball, 0, sol, '?', 'unknown', 0.3, 0),
     ],
     lines: [{ a: Q, b: along(Q, edge2 + p.arrive, 0.5), kind: 'worn' }],
     hint: {
@@ -685,7 +687,7 @@ export const AUTHORED = {
   r1: { w: 3, h: 1.6, bx: 0.9, carved: 130 } as StraightParams,
   r2: { w: 4, h: 2.2, ball: v(1.2, 0.7), carved: 35 } as CrossParams,
   r3a: { w: 4.2, h: 1.4, bx: 0.6, carved: 55, drainAt: 3 } as CorridorParams,
-  r3b: { w: 5, h0: 1.6, bx: 0.6, lean: 4, carved: 55, tx: 3.6, drainAt: 2 } as CrookedParams,
+  r3b: { w: 5, h0: 1.6, bx: 0.6, lean: 4, carved: 55, tx: 4.15, drainAt: 2 } as CrookedParams,
   r4: { w: 4, h: 2.3, corner: 70, toCorner: 1.5, exit: 45 } as CornerParams,
   r5: { side: 1.6, toCorner: 0.8, arrive: 25 } as HexParams,
   r6: { w: 4.6, h: 3.2, start: v(0.45, 0.8), lane: 2.6, atStart: 40, atHouse: 75 } as VaneParams,
