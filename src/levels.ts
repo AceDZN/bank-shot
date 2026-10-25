@@ -98,7 +98,7 @@ export interface Room {
 }
 
 export const STROKES = 3;
-export const BALL_R = 0.055;
+export const BALL_R = 0.068;
 const DRAIN_R = 0.06;
 
 /** Shot heading from the dial value. */
@@ -166,13 +166,15 @@ function guardUnique(room: Room, tries = 8): void {
     const path = shoot(room, stray);
     const end = path.length;
     let placed = false;
-    for (const r of [0.2, 0.16, 0.12]) {
-      for (let s = 0.45; s < end - 0.15 && !placed; s += 0.05) {
+    for (const r of [0.15, 0.12, 0.1]) {
+      for (let s = 0.7; s < end - 0.15 && !placed; s += 0.05) {
         const c = pointAt(path, s);
         const clear = Math.min(...keep.map((k) => distToPolyline(c, k)));
         const fromBall = dist(c, room.ball);
         const fromDrain = Math.min(...room.table.pockets.map((pk) => dist(c, pk.c)));
-        if (clear > r + 0.08 && fromBall > r + 0.15 && fromDrain > r + 0.15) {
+        const fromMarks = Math.min(...room.marks.map((m) => dist(c, m.at) - m.radius));
+        const fromPools = Math.min(Infinity, ...room.table.pools.map((pl) => dist(c, pl.c) - pl.r));
+        if (clear > r + 0.08 && fromBall > r + 0.3 && fromDrain > r + 0.15 && fromMarks > r + 0.12 && fromPools > r + 0.05) {
           room.table.pools.push({ c, r });
           placed = true;
         }
@@ -210,7 +212,7 @@ export function buildStraight(p: StraightParams, id = 'r1'): Room {
   const win = bareTrace(t, ball, sol);
   t.pockets.push({ c: win.bounces[1].p, r: DRAIN_R });
   // The classic slip: dialling the carved number itself sends the ball the mirror way.
-  t.pools.push(poolOn(t, ball, p.carved, Math.min(1.05, p.h * 0.62), 0.3));
+  t.pools.push(poolOn(t, ball, p.carved, Math.min(1.25, p.h * 0.78), 0.22));
   return finish({
     id,
     code: '1',
@@ -253,7 +255,7 @@ export function buildCross(p: CrossParams, id = 'r2'): Room {
   const t: Table = { poly: rectPoly(p.w, p.h), pockets: [], pools: [] };
   const win = bareTrace(t, p.ball, sol);
   t.pockets.push({ c: win.bounces[1].p, r: DRAIN_R });
-  t.pools.push(poolOn(t, p.ball, adjacent(sol), 1.0, 0.28));
+  t.pools.push(poolOn(t, p.ball, adjacent(sol), 1.2, 0.22));
   const back = 180 + sol;
   return finish({
     id,

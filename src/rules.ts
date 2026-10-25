@@ -192,26 +192,25 @@ export function trace(table: Table, shot: Shot): PathResult {
     const tEnd = Math.min(tWall, remaining);
 
     // Events before the wall, earliest wins.
-    let best: { t: number; kind: 'pocket' | 'pool' | 'vane'; i: number } | null = null;
-    table.pockets.forEach((pk, i) => {
+    let ev: { t: number; kind: 'pocket' | 'pool' | 'vane'; i: number } | null = null;
+    for (let i = 0; i < table.pockets.length; i++) {
+      const pk = table.pockets[i];
       const t = closestT(p, d, pk.c, 0, tEnd);
       if (dist(add(p, scale(d, t)), pk.c) <= pk.r + 1e-9) {
         const tIn = rayCircleEnter(p, d, pk.c, pk.r, 0, tEnd) ?? t;
-        if (!best || tIn < best.t) best = { t: tIn, kind: 'pocket', i };
+        if (!ev || tIn < ev.t) ev = { t: tIn, kind: 'pocket', i };
       }
-    });
-    table.pools.forEach((pl, i) => {
+    }
+    for (let i = 0; i < table.pools.length; i++) {
+      const pl = table.pools[i];
       const t = rayCircleEnter(p, d, pl.c, pl.r, 0, tEnd);
-      if (t !== null && (!best || t < best.t)) best = { t, kind: 'pool', i };
-    });
+      if (t !== null && (!ev || t < ev.t)) ev = { t, kind: 'pool', i };
+    }
     if (table.vane && !turned && shot.turn !== undefined) {
       const vn = table.vane;
       const t = closestT(p, d, vn.p, 0, tEnd);
-      if (t > 1e-6 && dist(add(p, scale(d, t)), vn.p) <= vn.r && (!best || t < best.t)) {
-        best = { t, kind: 'vane', i: 0 };
-      }
+      if (t > 1e-6 && dist(add(p, scale(d, t)), vn.p) <= vn.r && (!ev || t < ev.t)) ev = { t, kind: 'vane', i: 0 };
     }
-    const ev = best as { t: number; kind: 'pocket' | 'pool' | 'vane'; i: number } | null;
     if (ev) {
       if (ev.kind === 'pocket') {
         push(add(p, scale(d, ev.t)));

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#1a0f0a" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%231f5f63%22/%3E%3Cpath d=%22M10 50h44%22 stroke=%22%23e2b04a%22 stroke-width=%225%22/%3E%3Cpath d=%22M22 50 46 14%22 stroke=%22%23e2b04a%22 stroke-width=%224%22/%3E%3Ccircle cx=%2222%22 cy=%2244%22 r=%227%22 fill=%22%23f4ead6%22/%3E%3C/svg%3E" />
+    <title>מכת גדה</title>
+    <meta name="description" content="משחק טריקים תלת־ממדי בבית מרחץ רומי: קוראים את הזוויות החצובות בפסיפס, מסיקים את הזווית הנכונה ומכניסים את הכדור לחור." />
+  </head>
+  <body>
+    <canvas id="game" aria-label="מכת גדה — שולחן הפסיפס"></canvas>
+
+    <div id="hud" class="hidden">
+      <div class="tl">
+        <button class="round" id="btn-pause" aria-label="השהיה"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg></button>
+        <button class="round" id="btn-sound" aria-label="צלילים" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <div class="pill" aria-label="מכות ודירוג">
+          <span class="tokens" id="tokens"></span>
+          <span class="stars" id="stars"></span>
+        </div>
+      </div>
+
+      <div class="tr">
+        <div class="plaque"><span class="laurel">❦</span><span id="room-title"></span><span class="laurel flip">❦</span></div>
+        <div class="chip" id="fact"></div>
+        <div class="chip rule" id="rule">חוק השולחן: הכדור יוצא מהגדה באותה זווית שבה פגע בה</div>
+      </div>
+
+      <button class="lamp" id="btn-hint" aria-label="מנורת רמז" aria-pressed="false">
+        <svg viewBox="0 0 64 40"><path d="M6 26c6 6 30 8 44 0l8-6c-4-1-8 0-12 2-8-6-24-6-34 0z" fill="#e2b04a" stroke="#6b4210" stroke-width="2"/><path d="M48 18c3-6 1-11-2-14 0 5-3 7-2 11z" fill="#ffcf6a"/></svg>
+        <span>רמז</span>
+      </button>
+      <div class="hint-card hidden" id="hint-card" role="status"></div>
+
+      <div class="goal hidden" id="goal" role="status"></div>
+      <div class="slowmo hidden" id="slowmo"><svg viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7 3c0 6 10 6 10 9s-10 3-10 9M17 3c0 6-10 6-10 9" fill="none" stroke-width="2" stroke-linecap="round"/></svg><span>הילוך איטי</span></div>
+
+      <div class="panel" id="panel">
+        <button class="sq" id="btn-minus" aria-label="הקטנת הזווית (1°)">−</button>
+        <div class="readout"><bdi dir="ltr" id="angle">90°</bdi><small id="angle-cap">זווית לגדה</small></div>
+        <button class="sq" id="btn-plus" aria-label="הגדלת הזווית (1°)">+</button>
+        <div class="sep"></div>
+        <button class="strike" id="btn-strike" aria-label="הכה — לחיצה והחזקה">
+          <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="track"/><circle cx="50" cy="50" r="45" class="fill" id="power-ring"/></svg>
+          <svg class="cue" viewBox="0 0 24 24"><path d="M5 19 19 5" stroke-width="3" stroke-linecap="round"/><circle cx="4" cy="20" r="2.2"/></svg>
+          <span class="lbl">הכה</span>
+          <small>(לחיצה והחזקה)</small>
+        </button>
+      </div>
+
+      <div id="card" class="card hidden" role="dialog" aria-live="polite">
+        <div class="card-title" id="card-title"></div>
+        <div class="card-body" id="card-body"></div>
+        <div class="card-btns" id="card-btns"></div>
+      </div>
+      <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <div id="title" class="screen title-screen">
+      <div class="logo-block">
+        <div class="kicker">בית המרחץ של בית שאן · כיתה ז׳</div>
+        <h1 class="logo">מכת גדה</h1>
+        <div class="subtitle">קוראים את הזוויות בפסיפס · מכניסים בגדה</div>
+        <button class="btn gold big" id="btn-play"><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><span>שחקו</span></button>
+        <div class="row">
+          <button class="btn dark" id="btn-rooms">בחירת חדר</button>
+          <button class="btn dark" id="btn-how">איך משחקים?</button>
+        </div>
+      </div>
+      <div class="keys">
+        <div><kbd>←</kbd><kbd>→</kbd><span>זווית ±1° (Shift: ±10°)</span></div>
+        <div><kbd>רווח</kbd><span>החזיקו ושחררו: מכה</span></div>
+        <div><kbd>H</kbd><span>רמז</span></div>
+        <div><kbd>R</kbd><span>שוב</span></div>
+      </div>
+      <div class="loading" id="loading">מדליקים את המנורות…</div>
+    </div>
+
+    <div id="overlay" class="screen panel-screen hidden">
+      <div class="panel-box" id="panel-box"></div>
+    </div>
+
+    <div id="glerror" class="screen hidden"><div class="panel-box"><h2>הגרפיקה נעצרה</h2><p>הדפדפן איבד את הקשר ל־WebGL. רעננו את העמוד כדי להמשיך.</p><button class="btn gold" onclick="location.reload()">רענון</button></div></div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
