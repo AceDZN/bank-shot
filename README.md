@@ -50,7 +50,7 @@ Deep link: `?level=N` opens table N (1–8).
 
 The build is a plain static site.
 
-1. Import `AceDZN/bank-shot` in Vercel (framework preset: **Vite**).
+1. Import [`AceDZN/bank-shot`](https://github.com/AceDZN/bank-shot) in Vercel (framework preset: **Vite**).
 2. Build command `npm run build`, output directory `dist`.
 3. No environment variables.
 
