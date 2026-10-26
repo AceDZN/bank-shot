@@ -406,7 +406,7 @@ export class World {
         const c = findClip(clips, ...n);
         return c ? this.mixer!.clipAction(c) : null;
       };
-      this.actions.idle = pick('idle', 'breath', 'stand');
+      this.actions.idle = pick('idle_lean', 'lean', 'cross', 'relax', 'idle', 'breath', 'stand');
       this.actions.cheer = pick('cheer', 'clap', 'celebrat', 'victory', 'happy', 'jump');
       this.actions.facepalm = pick('facepalm', 'disappoint', 'sad', 'defeat', 'upset', 'shake');
       this.actions.disappointed = pick('disappoint', 'frustrat', 'sad') ?? this.actions.facepalm;

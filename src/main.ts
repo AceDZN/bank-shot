@@ -10,7 +10,7 @@ import { authoredRooms, BALL_R, reachOf, STROKES, type Room } from './levels.ts'
 import { freshRooms } from './variants.ts';
 import { World, type ShotAnim } from './scene.ts';
 import { loadModels } from './models.ts';
-import { initAudio, isMuted, setMuted, sfx, suspendAudio } from './audio.ts';
+import { duckMusic, initAudio, isMuted, isMusicOn, setMusicOn, setMuted, sfx, suspendAudio, winSting } from './audio.ts';
 import { heading, sub, v, type Vec } from './rules.ts';
 import { initHost, parseLevelParam, postToHost } from './host.ts';
 
@@ -23,13 +23,14 @@ interface Save {
   stars: Record<string, number>;
   muted: boolean;
   reduced: boolean;
+  music: boolean;
 }
 function loadSave(): Save {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY) ?? '');
-    return { stars: s.stars ?? {}, muted: !!s.muted, reduced: !!s.reduced };
+    return { stars: s.stars ?? {}, muted: !!s.muted, reduced: !!s.reduced, music: s.music !== false };
   } catch {
-    return { stars: {}, muted: false, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches };
+    return { stars: {}, muted: false, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches, music: true };
   }
 }
 const save = loadSave();
@@ -73,6 +74,7 @@ async function boot() {
   world = new World(canvas, models);
   world.reducedMotion = save.reduced;
   setMuted(save.muted);
+  setMusicOn(save.music);
   syncSoundBtn();
   resize();
   world.buildRoom(game.room);
@@ -133,6 +135,7 @@ function enterAim() {
   world.setHint(game.hintOpen ? (game.room.hint?.marks ?? []) : []);
   world.pushTo(null, 0);
   hideCard();
+  duckMusic(1);
   updateHud();
 }
 
@@ -335,6 +338,7 @@ function stepShot(dt: number) {
       if (a.s >= from) {
         a.slowmo = true;
         $('slowmo').classList.remove('hidden');
+        duckMusic(0.4);
       }
     }
     world.pushTo(a.slowmo ? path.points[path.points.length - 1] : p, a.slowmo ? 0.55 : 0.18);
@@ -378,6 +382,7 @@ function finishShot() {
   if (!anim || resultShown) return;
   resultShown = true;
   $('slowmo').classList.add('hidden');
+  duckMusic(0.75);
   const path = anim.path;
   game.settle();
   const rec = game.log[game.log.length - 1];
@@ -386,7 +391,7 @@ function finishShot() {
   const r = game.room;
   if (game.won) {
     world.play('cheer');
-    sfx.lyre();
+    winSting();
     sfx.whistle(true);
     const sc = game.scores[game.index]!;
     if (!fresh) {
@@ -501,6 +506,7 @@ function pause() {
   openOverlay(
     `<h2>הפסקה</h2>
     <label class="toggle"><span>צלילים</span><input type="checkbox" id="t-sound" ${isMuted() ? '' : 'checked'}></label>
+    <label class="toggle"><span>מוזיקה</span><input type="checkbox" id="t-music" ${isMusicOn() ? 'checked' : ''}></label>
     <label class="toggle"><span>פחות תנועה (בלי רעידות ובלי זום)</span><input type="checkbox" id="t-reduced" ${save.reduced ? 'checked' : ''}></label>
     <div class="row"><button class="btn gold" id="p-resume">המשך</button><button class="btn dark" id="p-restart">התחלת החדר מחדש</button><button class="btn dark" id="p-rooms">חדרים</button><button class="btn dark" id="p-title">למסך הפתיחה</button></div>`,
     (box) => {
@@ -509,6 +515,11 @@ function pause() {
         save.muted = isMuted();
         persist();
         syncSoundBtn();
+      });
+      box.querySelector<HTMLInputElement>('#t-music')!.addEventListener('change', (e) => {
+        setMusicOn((e.target as HTMLInputElement).checked);
+        save.music = isMusicOn();
+        persist();
       });
       box.querySelector<HTMLInputElement>('#t-reduced')!.addEventListener('change', (e) => {
         save.reduced = (e.target as HTMLInputElement).checked;

@@ -1,5 +1,5 @@
 // Synthesised sounds: marble clack, cushion tock, drain plonk, bath plop, vane clang, the
-// attendant's whistle, a lyre for wins and a quiet steam-and-lyre ambience. Starts after the
+// attendant's whistle and a lyre for wins, plus the bathhouse music loop. Starts after the
 // first gesture (browser autoplay rules).
 
 let ctx: AudioContext | null = null;
@@ -18,7 +18,7 @@ export function initAudio() {
   master = ctx.createGain();
   master.gain.value = muted ? 0 : 0.8;
   master.connect(ctx.destination);
-  startAmbience();
+  void startAmbience();
 }
 
 export function setMuted(m: boolean) {
@@ -124,35 +124,90 @@ export const sfx = {
   },
 };
 
-function startAmbience() {
+// ─── Music ─────────────────────────────────────────────────────────────────────────────────────
+// The bathhouse loop is decoded into a buffer and looped by Web Audio (gapless, unlike <audio loop>).
+// Without the file, a quiet synthesized lyre plays instead. No white-noise bed.
+let musicGain: GainNode | null = null;
+let musicOn = true;
+let duck = 1;
+let fallback: { stop: () => void } | null = null;
+let stingBuffer: AudioBuffer | null = null;
+
+async function loadBuffer(file: string): Promise<AudioBuffer | null> {
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}audio/${file}`);
+    if (!res.ok) return null;
+    return await ctx!.decodeAudioData(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+function musicLevel() {
+  return musicOn ? 0.55 * duck : 0;
+}
+
+async function startAmbience() {
   if (!ctx || !master || ambience) return;
-  const steam = ctx.createBufferSource();
-  steam.buffer = noiseBuffer(4);
-  steam.loop = true;
-  const f = ctx.createBiquadFilter();
-  f.type = 'bandpass';
-  f.frequency.value = 5000;
-  f.Q.value = 0.4;
-  const g = ctx.createGain();
-  g.gain.value = 0.015;
-  steam.connect(f).connect(g).connect(master);
-  steam.start();
-  // A slow lyre pattern in D dorian, very quiet.
+  ambience = { stop: () => undefined };
+  musicGain = ctx.createGain();
+  musicGain.gain.value = 0;
+  musicGain.connect(master);
+  const buf = await loadBuffer('bathhouse-loop.mp3');
+  void loadBuffer('win-sting.mp3').then((b) => (stingBuffer = b));
+  if (buf) {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    src.connect(musicGain);
+    src.start();
+    ambience = { stop: () => src.stop() };
+  } else {
+    fallback = lyreLoop(musicGain);
+    ambience = fallback;
+  }
+  // Fade in so the first gesture doesn't slam the music on.
+  musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.8);
+}
+
+/** A slow lyre pattern in D dorian, used only when the music file is missing. */
+function lyreLoop(dest: AudioNode) {
   const scale = [0, 2, 3, 5, 7, 9, 10, 12];
   let alive = true;
   const play = () => {
     if (!alive || !ctx) return;
     const n = scale[Math.floor(Math.random() * scale.length)];
     const f0 = 147 * Math.pow(2, n / 12);
-    tone('triangle', f0, f0, 1.6, 0.025);
-    if (Math.random() < 0.4) tone('triangle', f0 * 1.5, f0 * 1.5, 1.2, 0.015, 0.3);
+    tone('triangle', f0, f0, 1.6, 0.05, 0, dest);
+    if (Math.random() < 0.4) tone('triangle', f0 * 1.5, f0 * 1.5, 1.2, 0.03, 0.3, dest);
     setTimeout(play, 900 + Math.random() * 1400);
   };
   setTimeout(play, 1500);
-  ambience = {
-    stop: () => {
-      alive = false;
-      steam.stop();
-    },
-  };
+  return { stop: () => (alive = false) };
+}
+
+export function setMusicOn(on: boolean) {
+  musicOn = on;
+  if (ctx && musicGain) musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.3);
+}
+export const isMusicOn = () => musicOn;
+
+/** Dip the music under slow motion and result cards (1 = full). */
+export function duckMusic(level: number) {
+  duck = level;
+  if (ctx && musicGain) musicGain.gain.setTargetAtTime(musicLevel(), ctx.currentTime, 0.25);
+}
+
+/** The recorded win sting if there is one, else the synthesized lyre run. */
+export function winSting() {
+  if (ctx && master && stingBuffer && !muted) {
+    const src = ctx.createBufferSource();
+    src.buffer = stingBuffer;
+    const g = ctx.createGain();
+    g.gain.value = 0.8;
+    src.connect(g).connect(master);
+    src.start();
+    return;
+  }
+  sfx.lyre();
 }
