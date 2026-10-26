@@ -57,3 +57,16 @@ Now a 3D-model reference image (square 1:1), NOT a game screenshot: the same che
 ```
 Now another 3D-model reference image (square 1:1), not a game screenshot: a single ancient Roman terracotta oil lamp (lucerna), seen from a 3/4 top-front angle. It is LOW and FLAT like a small closed saucer: a round flat body about as tall as a finger, a shallow concave top disc with a small relief rosette and a small filling hole in the center, ONE short rounded nozzle sticking out horizontally at the front with a small dark wick hole, and a small vertical ring handle at the back. NOT a teapot, NOT a jug: no neck, no lid, no spout rising upward, no tall body. Warm orange-red fired clay, slightly worn, stylized realistic like a game prop. Plain light grey background, soft even studio light, whole object visible with margin, no flame, no text.
 ```
+
+## Decimus v2 (26 Oct 2026)
+
+Why: the user played the game and said Decimus "is standing weirdly, and has a creepy smile" (v1 had a wide toothy grin and stiff locked arms). v2 is a new Tripo input with a calm closed-mouth smile and an A-pose.
+
+- Tool: ChatGPT web app (signed-in Chrome, own tab), built-in image generation, model picker "Instant". New chat: https://chatgpt.com/c/6adf4f09-87d4-83ed-a8cf-4525675928e9 (one turn).
+- Output: `ref-attendant-v2.png`, 1254×1254 PNG, saved from the rendered image blob. Kept on the first generation: warm soft closed-mouth smile (lips together, no teeth), relaxed brown eyes, freckles, curly dark hair, cream tunic with terracotta Greek-key trim at neck, sleeves and hem, brown belt, white towel over his left shoulder tight to the body, brown sandals, symmetric A-pose with arms about 45–50° below horizontal and a clear gap to the torso, plain light grey background. Deviation: he reads a little older/leaner (≈14) than the chubbier v1 kid, and the fingers are slightly spread.
+
+### Turn 1 → `ref-attendant-v2.png` (Tripo input, not a mockup)
+
+```
+Create an image: a 3D-model reference image (square 1:1), not a game screenshot: a single full-body stylized 3D cartoon character in a Pixar-like style, "Decimus", a friendly Roman bath attendant boy of about 14, slightly bigger head, not realistic. He stands in a clean, symmetric, relaxed A-pose facing the camera straight on: arms angled down about 40 degrees below horizontal and slightly away from the body (hands open and relaxed, palms facing down/back, fingers gently together, a clear gap between arms and torso), legs slightly apart, feet flat, shoulders relaxed. Face: warm, calm and kind, with a soft gentle CLOSED-MOUTH smile (lips together, no teeth showing, no grin), relaxed friendly eyes looking at the camera, natural eyebrows, a few freckles. Curly dark brown hair, no laurel wreath. Short cream wool tunic with a terracotta Greek-key trim at the neck, sleeves and hem, a simple belt, a white towel draped over his left shoulder lying tight against the chest and back (not covering the arm), brown leather sandals. No props in hands. Plain light grey background, even soft studio lighting, no cast shadows on the background, whole body visible with margin, no text.
+```

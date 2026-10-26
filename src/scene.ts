@@ -406,7 +406,9 @@ export class World {
         const c = findClip(clips, ...n);
         return c ? this.mixer!.clipAction(c) : null;
       };
-      this.actions.idle = pick('idle_lean', 'lean', 'cross', 'relax', 'idle', 'breath', 'stand');
+      this.actions.idle = pick('idle', 'relax', 'breath', 'stand');
+      // Arms crossed, like the mockup: he drifts into it now and then while you think.
+      this.actions.arms = pick('folded', 'fold', 'cross', 'lean');
       this.actions.cheer = pick('cheer', 'clap', 'celebrat', 'victory', 'happy', 'jump');
       this.actions.facepalm = pick('facepalm', 'disappoint', 'sad', 'defeat', 'upset', 'shake');
       this.actions.disappointed = pick('disappoint', 'frustrat', 'sad') ?? this.actions.facepalm;
@@ -426,19 +428,23 @@ export class World {
   }
 
   private reactionLeft = 0;
+  private idleLeft = 14;
 
-  play(name: 'idle' | 'cheer' | 'facepalm' | 'disappointed') {
+  play(name: 'idle' | 'arms' | 'cheer' | 'facepalm' | 'disappointed') {
     const a = this.actions[name];
     if (!a || !this.mixer) return;
-    if (this.currentAction === a && name === 'idle') return;
+    const resting = name === 'idle' || name === 'arms';
+    if (this.currentAction === a && resting) return;
     a.reset();
-    a.setLoop(name === 'idle' ? THREE.LoopRepeat : THREE.LoopOnce, name === 'idle' ? Infinity : 1);
+    a.setLoop(resting ? THREE.LoopRepeat : THREE.LoopOnce, resting ? Infinity : 1);
     a.clampWhenFinished = true;
-    a.fadeIn(0.25).play();
-    if (this.currentAction && this.currentAction !== a) this.currentAction.fadeOut(0.25);
+    const fade = resting ? 0.8 : 0.25;
+    a.fadeIn(fade).play();
+    if (this.currentAction && this.currentAction !== a) this.currentAction.fadeOut(fade);
     this.currentAction = a;
     // Reactions are long Tripo clips; cut back to idle after a few seconds.
-    this.reactionLeft = name === 'idle' ? 0 : Math.min(a.getClip().duration, name === 'cheer' ? 4.5 : 4);
+    this.reactionLeft = resting ? 0 : Math.min(a.getClip().duration, name === 'cheer' ? 4.5 : 4);
+    if (resting) this.idleLeft = name === 'arms' ? 9 + Math.random() * 5 : 12 + Math.random() * 8;
   }
 
   // ─── Room ───────────────────────────────────────────────────────────────────────────────────
@@ -985,17 +991,36 @@ export class World {
       this.camera.position.copy(this.camNow.pos);
       this.camera.lookAt(this.camNow.look);
     }
-    // Stand Decimus where a fixed screen spot meets the hall floor.
-    cam.position.copy(this.camBase.pos);
-    cam.lookAt(this.camBase.look);
-    cam.updateMatrixWorld();
-    const ray = new THREE.Raycaster();
-    ray.setFromCamera(new THREE.Vector2(portrait ? -0.72 : -0.8, portrait ? -0.5 : -0.66), cam);
-    const feet = new THREE.Vector3();
-    if (ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), TABLE_DROP), feet)) {
-      this.attendant.position.copy(feet);
-      this.attendant.rotation.y = yaw + 0.2;
+    // Decimus stands right beside the table's left cushion, just behind its near corner, in screen
+    // terms (so it works for the rotated portrait view too), turned toward the table and the player.
+    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    const fwd = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const outerW = outer.map((p) => this.w(p, 0));
+    const nearMost = Math.min(...outerW.map((p) => p.dot(fwd)));
+    const depth = nearMost + 0.85;
+    // The table's left edge at his depth (the camera may be turned, so the corners don't tell).
+    let edge = Infinity;
+    for (let i = 0; i < outerW.length; i++) {
+      const A = outerW[i];
+      const B = outerW[(i + 1) % outerW.length];
+      for (let k = 0; k <= 60; k++) {
+        const q = A.clone().lerp(B, k / 60);
+        if (Math.abs(q.dot(fwd) - depth) < 0.06) edge = Math.min(edge, q.dot(right));
+      }
     }
+    if (!Number.isFinite(edge)) edge = Math.min(...outerW.map((p) => p.dot(right)));
+    let spot = right.clone().multiplyScalar(edge - 0.22).add(fwd.clone().multiplyScalar(depth));
+    if (portrait) {
+      // On a phone the table fills the width: he waits behind the far end instead, facing you.
+      const farMost = Math.max(...outerW.map((p) => p.dot(fwd)));
+      const lat = outerW.map((p) => p.dot(right));
+      spot = right.clone().multiplyScalar(Math.min(...lat) * 0.35 + Math.max(...lat) * 0.65 - 0.2).add(fwd.clone().multiplyScalar(farMost + 0.35));
+    }
+    this.attendant.position.set(spot.x, -TABLE_DROP, spot.z);
+    const toTable = Math.atan2(-spot.x, -spot.z);
+    const toCam = Math.atan2(this.camBase.pos.x - spot.x, this.camBase.pos.z - spot.z);
+    const turn = Math.atan2(Math.sin(toCam - toTable), Math.cos(toCam - toTable));
+    this.attendant.rotation.y = toTable + turn * 0.45;
   }
 
   /** Ease the camera toward a point on the table (strike follow, slow-motion push-in). */
@@ -1031,6 +1056,8 @@ export class World {
     if (this.reactionLeft > 0) {
       this.reactionLeft -= dt;
       if (this.reactionLeft <= 0) this.play('idle');
+    } else if (this.actions.arms && (this.idleLeft -= dt) <= 0) {
+      this.play(this.currentAction === this.actions.arms ? 'idle' : 'arms');
     }
     // Camera.
     const k = 1 - Math.exp(-dt * 3.2);

@@ -730,6 +730,21 @@ window.addEventListener('blur', () => {
   strikeBtn.classList.remove('charging');
 });
 
+// A real person's click or key always puts the game back on real time (test hooks may have
+// switched it to the manual clock in this tab).
+for (const ev of ['pointerdown', 'keydown'] as const) {
+  window.addEventListener(
+    ev,
+    (e) => {
+      if (e.isTrusted && manualClock) {
+        manualClock = false;
+        last = performance.now();
+      }
+    },
+    { capture: true },
+  );
+}
+
 // ─── Loop ────────────────────────────────────────────────────────────────────────────────────
 let last = performance.now();
 let fpsFrames = 0;
